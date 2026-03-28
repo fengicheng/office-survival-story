@@ -184,6 +184,8 @@ function createInitialState() {
       reducedStress: 0,
       startTime: MORNING_START,
       lastCheckedTime: MORNING_START,
+      lastCheckedEnergy: 70,
+      lastCheckedStress: 20,
     },
     night: {
       stayedUpHours: 0,
@@ -247,15 +249,17 @@ function render() {
 
   const bed = BEDS[state.bedType];
   const job = JOBS[state.jobType];
-  const energyPercent = (state.energy / state.energyMax) * 100;
-  const stressPercent = (state.stress / 100) * 100;
+  const displayedEnergy = getDisplayedEnergy();
+  const displayedStress = getDisplayedStress();
+  const energyPercent = (displayedEnergy / state.energyMax) * 100;
+  const stressPercent = (displayedStress / 100) * 100;
 
   ui.dayValue.textContent = String(state.day);
   ui.timeValue.textContent = formatTime(getDisplayedTime());
   ui.stageValue.textContent = stageLabel(state.stage);
   ui.moneyValue.textContent = `${Math.round(state.money)} / ${MAX_MONEY}`;
-  ui.energyText.textContent = `${Math.round(state.energy)} / ${Math.round(state.energyMax)}`;
-  ui.stressText.textContent = `${Math.round(state.stress)} / 100`;
+  ui.energyText.textContent = `${Math.round(displayedEnergy)} / ${Math.round(state.energyMax)}`;
+  ui.stressText.textContent = `${Math.round(displayedStress)} / 100`;
   ui.energyFill.style.width = `${Math.max(0, Math.min(100, energyPercent))}%`;
   ui.stressFill.style.width = `${Math.max(0, Math.min(100, stressPercent))}%`;
   ui.bedValue.textContent = bed.name;
@@ -283,6 +287,20 @@ function getDisplayedTime() {
     return state.morning.lastCheckedTime ?? MORNING_START;
   }
   return state.currentTime;
+}
+
+function getDisplayedEnergy() {
+  if (state.stage === "morning" && state.morning.dozing) {
+    return state.morning.lastCheckedEnergy ?? state.energy;
+  }
+  return state.energy;
+}
+
+function getDisplayedStress() {
+  if (state.stage === "morning" && state.morning.dozing) {
+    return state.morning.lastCheckedStress ?? state.stress;
+  }
+  return state.stress;
 }
 
 function getSceneCopy() {
@@ -504,16 +522,28 @@ function resolveWorkDay() {
 }
 
 function startDozing() {
-  if (state.morning.dozing) {
+  beginDozing(false);
+}
+
+function resumeDozing() {
+  beginDozing(true);
+}
+
+function beginDozing(isResume) {
+  if (dozeTimer) {
     return;
   }
   closeModal();
   state.morning.dozing = true;
-  state.morning.recoveredEnergy = 0;
-  state.morning.reducedStress = 0;
-  state.morning.startTime = state.currentTime;
+  if (!isResume) {
+    state.morning.recoveredEnergy = 0;
+    state.morning.reducedStress = 0;
+    state.morning.startTime = state.currentTime;
+    addLog(state, "你把闹钟往旁边一丢，决定偷一点高收益回笼觉。");
+  }
   state.morning.lastCheckedTime = state.currentTime;
-  addLog(state, "你把闹钟往旁边一丢，决定偷一点高收益回笼觉。");
+  state.morning.lastCheckedEnergy = state.energy;
+  state.morning.lastCheckedStress = state.stress;
   render();
 
   dozeTimer = window.setInterval(() => {
@@ -542,8 +572,6 @@ function startDozing() {
       forceWake();
       return;
     }
-
-    render();
   }, DOZE_TICK_MS);
 }
 
@@ -576,6 +604,8 @@ function openPhoneModal() {
   const delta = applyDelta(state, { stress: 2 });
   state.currentTime = Math.min(WORK_START, state.currentTime + PHONE_TIME_COST);
   state.morning.lastCheckedTime = state.currentTime;
+  state.morning.lastCheckedEnergy = state.energy;
+  state.morning.lastCheckedStress = state.stress;
   addLog(state, `你摸到手机看了一眼时间，压力 ${formatSigned(delta.stress)}。`);
 
   if (state.currentTime >= WORK_START) {
@@ -603,7 +633,7 @@ function openPhoneModal() {
   openModal(body, () => {
     document.querySelector("#continue-dozing")?.addEventListener("click", () => {
       closeModal();
-      startDozing();
+      resumeDozing();
     });
     document.querySelector("#wake-up-now")?.addEventListener("click", transitionToWork);
   });
@@ -616,7 +646,10 @@ function forceWake() {
   closeModal();
   state.currentTime = WORK_START;
   state.morning.dozing = false;
+  state.morning.lastCheckedTime = WORK_START;
   const delta = applyDelta(state, { energy: -10, stress: 15, money: -100 });
+  state.morning.lastCheckedEnergy = state.energy;
+  state.morning.lastCheckedStress = state.stress;
   addLog(
     state,
     `你一睁眼发现已经迟到了。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
@@ -629,6 +662,26 @@ function forceWake() {
 
   state.stage = "working";
   state.working.busy = false;
+  openModal(
+    `
+      <div class="modal-card">
+        <h3>睡过头了</h3>
+        <p>时间已经到 <strong>08:30</strong>。你是被现实一把掀下床的，今天迟到已经板上钉钉。</p>
+        <div class="modal-grid">
+          <div class="modal-section">
+            <strong>本次惩罚</strong>
+            <p>精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="overslept-confirm" class="modal-btn">赶去上班</button>
+        </div>
+      </div>
+    `,
+    () => {
+      document.querySelector("#overslept-confirm")?.addEventListener("click", closeModal);
+    },
+  );
   render();
 }
 
@@ -690,6 +743,8 @@ function sleepUntilMorning() {
   state.morning.reducedStress = 0;
   state.morning.startTime = MORNING_START;
   state.morning.lastCheckedTime = MORNING_START;
+  state.morning.lastCheckedEnergy = state.energy;
+  state.morning.lastCheckedStress = state.stress;
   state.night.stayedUpHours = 0;
 
   addLog(
@@ -742,6 +797,8 @@ function stayUpOneHour() {
     state.stage = "morning";
     state.morning.dozing = false;
     state.morning.lastCheckedTime = MORNING_START;
+    state.morning.lastCheckedEnergy = state.energy;
+    state.morning.lastCheckedStress = state.stress;
     addLog(state, "天亮了，你干脆一夜没睡，带着满身疲惫直接迎接新一天。");
   }
 
