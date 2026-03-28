@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>社畜求生记</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Clickable Web Prototype</p>
+          <h1>社畜求生记</h1>
+          <p class="hero-copy">
+            在起床、搬砖、熬夜和攒钱之间反复横跳，试着活到财富自由。
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="reset-btn" class="ghost-btn">重新开局</button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="panel status-panel">
+          <div class="status-top">
+            <div>
+              <span class="label">第</span>
+              <strong id="day-value">1</strong>
+              <span class="label">天</span>
+            </div>
+            <div class="clock-block">
+              <span id="time-value">07:30</span>
+              <span id="stage-value">早晨阶段</span>
+            </div>
+            <div class="money-block">
+              <span class="label">资金</span>
+              <strong id="money-value">500</strong>
+            </div>
+          </div>
+
+          <div class="meter-list">
+            <div class="meter-card">
+              <div class="meter-head">
+                <span>精力</span>
+                <span id="energy-text">70 / 100</span>
+              </div>
+              <div class="meter-bar">
+                <div id="energy-fill" class="meter-fill energy-fill"></div>
+              </div>
+            </div>
+
+            <div class="meter-card">
+              <div class="meter-head">
+                <span>压力</span>
+                <span id="stress-text">20 / 100</span>
+              </div>
+              <div class="meter-bar">
+                <div id="stress-fill" class="meter-fill stress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="summary-grid">
+            <article class="summary-card">
+              <span class="label">当前床铺</span>
+              <strong id="bed-value">木板床</strong>
+            </article>
+            <article class="summary-card">
+              <span class="label">工作路线</span>
+              <strong id="job-value">普通公司</strong>
+            </article>
+            <article class="summary-card">
+              <span class="label">睡眠增益</span>
+              <strong id="sleep-buff-value">x1.0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="label">回笼觉</span>
+              <strong id="doze-value">未开始</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="grid-two">
+          <section class="panel scene-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">当前场景</p>
+                <h2 id="scene-title">闹钟响了</h2>
+              </div>
+              <span id="scene-tag" class="scene-tag">Morning</span>
+            </div>
+
+            <div id="scene-visual" class="scene-visual"></div>
+            <p id="scene-description" class="scene-description"></p>
+            <div id="action-bar" class="action-bar"></div>
+          </section>
+
+          <section class="panel side-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">背包与说明</p>
+                <h2>资源</h2>
+              </div>
+            </div>
+
+            <div id="inventory-list" class="inventory-list"></div>
+
+            <div class="tip-box">
+              <p class="tip-title">玩法提示</p>
+              <p id="tip-copy" class="tip-copy"></p>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">每日记录</p>
+              <h2>事件日志</h2>
+            </div>
+          </div>
+          <div id="log-list" class="log-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="modal-root" class="modal-root hidden"></div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
