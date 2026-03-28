@@ -98,6 +98,13 @@ h2 {
   box-shadow: inset 0 0 0 1px rgba(189, 80, 52, 0.18);
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .ghost-btn:hover,
 .action-btn:hover,
 .store-btn:hover,

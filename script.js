@@ -7,6 +7,10 @@ const MAX_MONEY = 30000;
 const DOZE_TICK_MS = 250;
 const BASE_DOZE_MINUTES_PER_TICK = 1.2;
 const PHONE_TIME_COST = 3;
+const BGM_TRACKS = [
+  "./Lo-Fi Blue Morning Loop-1.mp3",
+  "./Lo-Fi Blue Morning Loop-2.mp3",
+];
 
 const BEDS = {
   wood: {
@@ -140,16 +144,23 @@ const ui = {
   tipCopy: document.querySelector("#tip-copy"),
   logList: document.querySelector("#log-list"),
   modalRoot: document.querySelector("#modal-root"),
+  musicToggleBtn: document.querySelector("#music-toggle-btn"),
   resetBtn: document.querySelector("#reset-btn"),
 };
 
 let state = loadState() ?? createInitialState();
 let dozeTimer = null;
+let bgmAudio = null;
+let bgmTrackIndex = 0;
+let bgmEnabled = true;
+let bgmUnlockBound = false;
 
 bindEvents();
+setupBackgroundMusic();
 render();
 
 function bindEvents() {
+  ui.musicToggleBtn.addEventListener("click", toggleBackgroundMusic);
   ui.resetBtn.addEventListener("click", () => {
     if (!window.confirm("重新开局会清掉当前进度，确定继续吗？")) {
       return;
@@ -159,6 +170,102 @@ function bindEvents() {
     saveState();
     render();
   });
+}
+
+function setupBackgroundMusic() {
+  bgmAudio = new Audio(BGM_TRACKS[0]);
+  bgmAudio.preload = "auto";
+  bgmAudio.volume = 0.45;
+  bgmAudio.addEventListener("ended", () => {
+    bgmTrackIndex = (bgmTrackIndex + 1) % BGM_TRACKS.length;
+    playCurrentTrack();
+  });
+  updateMusicButton();
+  tryStartBackgroundMusic();
+}
+
+function tryStartBackgroundMusic() {
+  if (!bgmEnabled || !bgmAudio) {
+    updateMusicButton();
+    return;
+  }
+
+  playCurrentTrack().catch(() => {
+    bindMusicUnlock();
+    updateMusicButton("点击任意处开始音乐");
+  });
+}
+
+function playCurrentTrack() {
+  bgmAudio.src = BGM_TRACKS[bgmTrackIndex];
+  bgmAudio.load();
+  updateMusicButton();
+  return bgmAudio
+    .play()
+    .then(() => {
+      updateMusicButton();
+      unbindMusicUnlock();
+    })
+    .catch((error) => {
+      bindMusicUnlock();
+      throw error;
+    });
+}
+
+function bindMusicUnlock() {
+  if (bgmUnlockBound) {
+    return;
+  }
+  bgmUnlockBound = true;
+  const unlock = () => {
+    unbindMusicUnlock();
+    if (bgmEnabled) {
+      playCurrentTrack().catch(() => {
+        updateMusicButton("点击音乐按钮播放");
+      });
+    }
+  };
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
+}
+
+function unbindMusicUnlock() {
+  bgmUnlockBound = false;
+}
+
+function toggleBackgroundMusic() {
+  if (!bgmAudio) {
+    return;
+  }
+
+  if (bgmEnabled) {
+    bgmEnabled = false;
+    bgmAudio.pause();
+    updateMusicButton();
+    return;
+  }
+
+  bgmEnabled = true;
+  tryStartBackgroundMusic();
+}
+
+function updateMusicButton(overrideLabel) {
+  if (overrideLabel) {
+    ui.musicToggleBtn.textContent = overrideLabel;
+    return;
+  }
+
+  if (!bgmEnabled) {
+    ui.musicToggleBtn.textContent = "音乐已关闭";
+    return;
+  }
+
+  if (bgmAudio && !bgmAudio.paused) {
+    ui.musicToggleBtn.textContent = `音乐播放中 ${bgmTrackIndex + 1}/${BGM_TRACKS.length}`;
+    return;
+  }
+
+  ui.musicToggleBtn.textContent = "音乐准备中";
 }
 
 function createInitialState() {
