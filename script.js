@@ -131,7 +131,6 @@ const ui = {
   bedValue: document.querySelector("#bed-value"),
   jobValue: document.querySelector("#job-value"),
   sleepBuffValue: document.querySelector("#sleep-buff-value"),
-  dozeValue: document.querySelector("#doze-value"),
   sceneTitle: document.querySelector("#scene-title"),
   sceneTag: document.querySelector("#scene-tag"),
   sceneVisual: document.querySelector("#scene-visual"),
@@ -184,6 +183,7 @@ function createInitialState() {
       recoveredEnergy: 0,
       reducedStress: 0,
       startTime: MORNING_START,
+      lastCheckedTime: MORNING_START,
     },
     night: {
       stayedUpHours: 0,
@@ -249,12 +249,9 @@ function render() {
   const job = JOBS[state.jobType];
   const energyPercent = (state.energy / state.energyMax) * 100;
   const stressPercent = (state.stress / 100) * 100;
-  const dozeSummary = state.morning.dozing
-    ? `${formatNumber(state.morning.recoveredEnergy)} 精力 / ${formatNumber(state.morning.reducedStress)} 压力`
-    : "未开始";
 
   ui.dayValue.textContent = String(state.day);
-  ui.timeValue.textContent = formatTime(state.currentTime);
+  ui.timeValue.textContent = formatTime(getDisplayedTime());
   ui.stageValue.textContent = stageLabel(state.stage);
   ui.moneyValue.textContent = `${Math.round(state.money)} / ${MAX_MONEY}`;
   ui.energyText.textContent = `${Math.round(state.energy)} / ${Math.round(state.energyMax)}`;
@@ -264,7 +261,6 @@ function render() {
   ui.bedValue.textContent = bed.name;
   ui.jobValue.textContent = job.name;
   ui.sleepBuffValue.textContent = `x${state.sleepBuff.toFixed(1)}`;
-  ui.dozeValue.textContent = dozeSummary;
 
   renderScene();
   renderActions();
@@ -280,6 +276,13 @@ function renderScene() {
   ui.tipCopy.textContent = scene.tip;
   ui.sceneVisual.className = `scene-visual ${scene.visual}`;
   ui.sceneVisual.innerHTML = `<p class="visual-copy">${scene.visualCopy}</p>`;
+}
+
+function getDisplayedTime() {
+  if (state.stage === "morning" && state.morning.dozing) {
+    return state.morning.lastCheckedTime ?? MORNING_START;
+  }
+  return state.currentTime;
 }
 
 function getSceneCopy() {
@@ -509,6 +512,7 @@ function startDozing() {
   state.morning.recoveredEnergy = 0;
   state.morning.reducedStress = 0;
   state.morning.startTime = state.currentTime;
+  state.morning.lastCheckedTime = state.currentTime;
   addLog(state, "你把闹钟往旁边一丢，决定偷一点高收益回笼觉。");
   render();
 
@@ -571,6 +575,7 @@ function openPhoneModal() {
   stopDozing();
   const delta = applyDelta(state, { stress: 2 });
   state.currentTime = Math.min(WORK_START, state.currentTime + PHONE_TIME_COST);
+  state.morning.lastCheckedTime = state.currentTime;
   addLog(state, `你摸到手机看了一眼时间，压力 ${formatSigned(delta.stress)}。`);
 
   if (state.currentTime >= WORK_START) {
@@ -581,7 +586,7 @@ function openPhoneModal() {
   const body = `
     <div class="modal-card">
       <h3>手机亮起来了</h3>
-      <p>现在是 <strong>${formatTime(state.currentTime)}</strong>。你已经靠回笼觉恢复了 <strong>${formatNumber(state.morning.recoveredEnergy)}</strong> 精力，减掉了 <strong>${formatNumber(state.morning.reducedStress)}</strong> 压力。</p>
+      <p>现在是 <strong>${formatTime(state.currentTime)}</strong>。你盯着时间犹豫了一下，决定是马上起床，还是继续赌后面的几分钟。</p>
       <div class="modal-grid">
         <div class="modal-section">
           <strong>查看手机代价</strong>
@@ -684,6 +689,7 @@ function sleepUntilMorning() {
   state.morning.recoveredEnergy = 0;
   state.morning.reducedStress = 0;
   state.morning.startTime = MORNING_START;
+  state.morning.lastCheckedTime = MORNING_START;
   state.night.stayedUpHours = 0;
 
   addLog(
@@ -735,6 +741,7 @@ function stayUpOneHour() {
     applySleepDebt(8);
     state.stage = "morning";
     state.morning.dozing = false;
+    state.morning.lastCheckedTime = MORNING_START;
     addLog(state, "天亮了，你干脆一夜没睡，带着满身疲惫直接迎接新一天。");
   }
 
