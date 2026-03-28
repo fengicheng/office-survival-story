@@ -547,7 +547,9 @@ function renderInventory() {
     useBtn.disabled = count <= 0 || !item.canUse(state) || state.morning.dozing;
     useBtn.addEventListener("click", () => {
       item.use(state);
-      checkEndConditions();
+      if (finalizeAfterEndCheck()) {
+        return;
+      }
       render();
     });
     actions.appendChild(useBtn);
@@ -622,9 +624,10 @@ function resolveWorkDay() {
       `今天的班终于结算了。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
     );
 
-    if (!checkEndConditions()) {
-      render();
+    if (finalizeAfterEndCheck()) {
+      return;
     }
+    render();
   }, 1200);
 }
 
@@ -715,6 +718,10 @@ function openPhoneModal() {
   state.morning.lastCheckedStress = state.stress;
   addLog(state, `你摸到手机看了一眼时间，压力 ${formatSigned(delta.stress)}。`);
 
+  if (finalizeAfterEndCheck()) {
+    return;
+  }
+
   if (state.currentTime >= WORK_START) {
     forceWake();
     return;
@@ -762,8 +769,7 @@ function forceWake() {
     `你一睁眼发现已经迟到了。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
   );
 
-  if (checkEndConditions()) {
-    render();
+  if (finalizeAfterEndCheck()) {
     return;
   }
 
@@ -859,7 +865,9 @@ function sleepUntilMorning() {
     `你睡到了天亮。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。${debtHours > 0 ? `睡眠不足 ${debtHours} 小时。` : "今天起床不算太惨。"}`
   );
 
-  checkEndConditions();
+  if (finalizeAfterEndCheck()) {
+    return;
+  }
   render();
 }
 
@@ -893,8 +901,7 @@ function stayUpOneHour() {
     `你又熬了 1 小时夜。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。`,
   );
 
-  if (checkEndConditions()) {
-    render();
+  if (finalizeAfterEndCheck()) {
     return;
   }
 
@@ -907,6 +914,9 @@ function stayUpOneHour() {
     state.morning.lastCheckedEnergy = state.energy;
     state.morning.lastCheckedStress = state.stress;
     addLog(state, "天亮了，你干脆一夜没睡，带着满身疲惫直接迎接新一天。");
+    if (finalizeAfterEndCheck()) {
+      return;
+    }
   }
 
   render();
@@ -1097,6 +1107,8 @@ function addLog(targetState, text) {
 function checkEndConditions() {
   if (state.energy <= 0) {
     stopDozing();
+    state.working.busy = false;
+    state.morning.dozing = false;
     state.stage = "gameover";
     closeModal();
     addLog(state, "你倒下了。身体表示这班是真上不动了。");
@@ -1104,6 +1116,8 @@ function checkEndConditions() {
   }
   if (state.stress >= 100) {
     stopDozing();
+    state.working.busy = false;
+    state.morning.dozing = false;
     state.stage = "gameover";
     closeModal();
     addLog(state, "你绷不住了。精神率先在工位上宣布下班。");
@@ -1111,9 +1125,19 @@ function checkEndConditions() {
   }
   if (state.money >= MAX_MONEY) {
     stopDozing();
+    state.working.busy = false;
+    state.morning.dozing = false;
     state.stage = "victory";
     closeModal();
     addLog(state, "存款终于到了可以跑路的地步。财富自由达成。");
+    return true;
+  }
+  return false;
+}
+
+function finalizeAfterEndCheck() {
+  if (checkEndConditions()) {
+    render();
     return true;
   }
   return false;
