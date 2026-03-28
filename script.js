@@ -11,6 +11,12 @@ const BGM_TRACKS = [
   "./Lo-Fi Blue Morning Loop-1.mp3",
   "./Lo-Fi Blue Morning Loop-2.mp3",
 ];
+const WORK_EVENT_SOURCE = "./随机事件表-工作阶段.md";
+const WORK_EVENT_RARITY_PROFILES = [
+  { 普通: 55, 少见: 28, 稀有: 12, 极稀有: 5 },
+  { 普通: 45, 少见: 30, 稀有: 18, 极稀有: 7 },
+  { 普通: 35, 少见: 32, 稀有: 23, 极稀有: 10 },
+];
 
 const BEDS = {
   wood: {
@@ -123,6 +129,71 @@ const ITEMS = {
   },
 };
 
+const FALLBACK_WORK_EVENTS = [
+  {
+    id: "01",
+    title: "早会点名",
+    rarity: "普通",
+    description: "主管拿着名单扫视全场，问谁来汇报昨天的进度。",
+    options: [
+      { label: "主动发言", energy: -4, stress: 6, money: 60 },
+      { label: "低头装忙", energy: 0, stress: 4, money: 0 },
+      { label: "把锅甩给同事", energy: 1, stress: 9, money: -30 },
+    ],
+  },
+  {
+    id: "06",
+    title: "紧急需求插队",
+    rarity: "普通",
+    description: "领导说这个需求真的很急，于是你今天的安排全废了。",
+    options: [
+      { label: "立刻接", energy: -9, stress: 11, money: 90 },
+      { label: "拖半小时再说", energy: -3, stress: 6, money: 0 },
+    ],
+  },
+  {
+    id: "15",
+    title: "摸鱼被抓包",
+    rarity: "少见",
+    description: "你刚切回工作界面，领导刚好站在你背后。",
+    options: [
+      { label: "假装在查资料", energy: -1, stress: 9, money: 0 },
+      { label: "主动认错", energy: 0, stress: 6, money: -60 },
+    ],
+  },
+  {
+    id: "32",
+    title: "服务器报警",
+    rarity: "少见",
+    description: "系统突然报警，所有人开始装作自己知道发生了什么。",
+    options: [
+      { label: "冲上去排查", energy: -9, stress: 13, money: 120 },
+      { label: "等别人先说", energy: 0, stress: 8, money: 0 },
+    ],
+  },
+  {
+    id: "48",
+    title: "老板请下午茶",
+    rarity: "稀有",
+    description: "老板罕见地请全员喝下午茶，大家表情复杂。",
+    options: [
+      { label: "接受并感谢", energy: 5, stress: -4, money: 0 },
+      { label: "怀疑有坑", energy: 0, stress: 3, money: 0 },
+    ],
+  },
+  {
+    id: "80",
+    title: "公司传出裁员风声",
+    rarity: "极稀有",
+    description: "办公室里开始流传裁员名单的消息，所有人都突然坐得比平时更直。",
+    options: [
+      { label: "疯狂证明自己", energy: -10, stress: 15, money: 120 },
+      { label: "悄悄更新简历", energy: -3, stress: 6, money: -40 },
+      { label: "装作不知道", energy: 0, stress: 11, money: 0 },
+    ],
+  },
+];
+
 const ui = {
   dayValue: document.querySelector("#day-value"),
   timeValue: document.querySelector("#time-value"),
@@ -154,9 +225,11 @@ let bgmAudio = null;
 let bgmTrackIndex = 0;
 let bgmEnabled = true;
 let bgmUnlockBound = false;
+let workEventCatalog = [...FALLBACK_WORK_EVENTS];
 
 bindEvents();
 setupBackgroundMusic();
+loadWorkEventCatalog();
 render();
 
 function bindEvents() {
@@ -299,6 +372,9 @@ function createInitialState() {
     },
     working: {
       busy: false,
+      phase: "idle",
+      dailyEvents: [],
+      currentEventIndex: 0,
     },
     log: [],
   };
@@ -337,6 +413,9 @@ function withDefaults(candidate) {
       ...initial.working,
       ...(candidate.working ?? {}),
       busy: false,
+      phase: "idle",
+      dailyEvents: [],
+      currentEventIndex: 0,
     },
     log: Array.isArray(candidate.log) ? candidate.log.slice(0, 18) : initial.log,
     morning: {
@@ -433,14 +512,37 @@ function getSceneCopy() {
   }
 
   if (state.stage === "working") {
+    const totalEvents = state.working.dailyEvents?.length ?? 0;
+    const currentStep = Math.min(totalEvents, state.working.currentEventIndex + 1);
+
+    if (state.working.phase === "events" && totalEvents > 0) {
+      return {
+        title: `工作随机事件 ${currentStep}/${totalEvents}`,
+        tag: "Working Event",
+        visual: "working",
+        description: "上班从来不只是扣一条体力条那么简单。今天的随机事故、会议和烂活正在排队等你选。",
+        tip: "每天工作阶段会出现 3 个随机事件。每个选择都会影响精力、压力和资金。",
+        visualCopy: "今天最累的，未必是基础工作量，而是那些突然砸下来的事。",
+      };
+    }
+
+    if (state.working.phase === "settling") {
+      return {
+        title: "正在努力搬砖",
+        tag: "Working",
+        visual: "working",
+        description: "三个随机事件刚结束，你正把今天剩下的标准工作量硬生生扛完。",
+        tip: "工作随机事件会先结算，再进入当天基础工作结算。",
+        visualCopy: "事情处理完了，班还没上完。",
+      };
+    }
+
     return {
-      title: state.working.busy ? "正在努力搬砖" : "准备上班",
+      title: "准备上班",
       tag: "Working",
       visual: "working",
-      description: state.working.busy
-        ? "会议、日报、返工和临时需求正在往你脸上招呼。"
-        : "一旦开始工作，就会直接结算今天的体力、压力和收入。",
-      tip: "工作阶段无法打开商店，建议早晚提前买好道具。",
+      description: "开始工作后，你会先遭遇 3 个随机工作事件，再结算当天的基础体力、压力和工资。",
+      tip: "工作阶段无法打开商店。随机事件每天都会不一样，而且越往后越容易抽到高等级事件。",
       visualCopy: "你看起来很忙，事实上也确实很忙。",
     };
   }
@@ -497,9 +599,14 @@ function renderActions() {
     }
   } else if (state.stage === "working") {
     actions.push({
-      label: state.working.busy ? "正在搬砖..." : "开始今天的工作",
+      label:
+        state.working.phase === "events"
+          ? "事件处理中..."
+          : state.working.phase === "settling"
+            ? "正在搬砖..."
+            : "开始今天的工作",
       onClick: resolveWorkDay,
-      disabled: state.working.busy,
+      disabled: state.working.busy || state.working.phase !== "idle",
     });
   } else if (state.stage === "night") {
     actions.push({ label: "睡觉", onClick: openSleepModal });
@@ -595,17 +702,105 @@ function transitionToWork() {
   state.stage = "working";
   state.currentTime = WORK_START;
   state.morning.dozing = false;
-  state.working.busy = false;
+  resetWorkingState();
   addLog(state, "你挣扎着爬起来，准备去公司打卡。");
   render();
 }
 
 function resolveWorkDay() {
-  if (state.working.busy) {
+  if (state.working.busy || state.working.phase !== "idle") {
     return;
   }
 
   state.working.busy = true;
+  state.working.phase = "events";
+  state.working.dailyEvents = generateDailyWorkEvents();
+  state.working.currentEventIndex = 0;
+  addLog(state, `今天的班刚开始，先砸来了 ${state.working.dailyEvents.length} 个随机工作事件。`);
+  render();
+  openCurrentWorkEvent();
+}
+
+function openCurrentWorkEvent() {
+  const event = state.working.dailyEvents[state.working.currentEventIndex];
+  if (!event) {
+    resolveBaseWorkSettlement();
+    return;
+  }
+
+  const optionsHtml = event.options
+    .map((option, index) => {
+      const deltaLine = `精力 ${formatSigned(option.energy)} / 压力 ${formatSigned(option.stress)} / 资金 ${formatSigned(option.money)}`;
+      return `
+        <div class="modal-section">
+          <strong>${option.label}</strong>
+          <p>${deltaLine}</p>
+          <button class="modal-btn work-event-option" data-option-index="${index}">选择这个方案</button>
+        </div>
+      `;
+    })
+    .join("");
+
+  openModal(
+    `
+      <div class="modal-card">
+        <h3>${event.title}</h3>
+        <p>${event.description}</p>
+        <div class="modal-grid">
+          <div class="modal-section">
+            <strong>事件等级</strong>
+            <p>${event.rarity}</p>
+          </div>
+          ${optionsHtml}
+        </div>
+      </div>
+    `,
+    () => {
+      document.querySelectorAll(".work-event-option").forEach((button) => {
+        button.addEventListener("click", () => {
+          const optionIndex = Number(button.getAttribute("data-option-index"));
+          chooseWorkEventOption(optionIndex);
+        });
+      });
+    },
+  );
+}
+
+function chooseWorkEventOption(optionIndex) {
+  const event = state.working.dailyEvents[state.working.currentEventIndex];
+  if (!event) {
+    closeModal();
+    resolveBaseWorkSettlement();
+    return;
+  }
+
+  const option = event.options[optionIndex];
+  if (!option) {
+    return;
+  }
+
+  closeModal();
+  const delta = applyDelta(state, {
+    energy: option.energy,
+    stress: option.stress,
+    money: option.money,
+  });
+  addLog(
+    state,
+    `随机事件【${event.title}】你选择了“${option.label}”。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
+  );
+
+  state.working.currentEventIndex += 1;
+  if (finalizeAfterEndCheck()) {
+    return;
+  }
+
+  render();
+  openCurrentWorkEvent();
+}
+
+function resolveBaseWorkSettlement() {
+  state.working.phase = "settling";
   render();
 
   window.setTimeout(() => {
@@ -617,7 +812,7 @@ function resolveWorkDay() {
     });
     state.currentTime = NIGHT_START;
     state.stage = "night";
-    state.working.busy = false;
+    resetWorkingState();
     state.night.stayedUpHours = 0;
     addLog(
       state,
@@ -629,6 +824,13 @@ function resolveWorkDay() {
     }
     render();
   }, 1200);
+}
+
+function resetWorkingState() {
+  state.working.busy = false;
+  state.working.phase = "idle";
+  state.working.dailyEvents = [];
+  state.working.currentEventIndex = 0;
 }
 
 function startDozing() {
@@ -774,7 +976,7 @@ function forceWake() {
   }
 
   state.stage = "working";
-  state.working.busy = false;
+  resetWorkingState();
   openModal(
     `
       <div class="modal-card">
@@ -971,6 +1173,153 @@ function openStoreModal() {
   openModal(body, bindStoreEvents);
 }
 
+async function loadWorkEventCatalog() {
+  try {
+    const response = await fetch(WORK_EVENT_SOURCE);
+    if (!response.ok) {
+      throw new Error(`Failed to load work events: ${response.status}`);
+    }
+    const markdown = await response.text();
+    const parsedEvents = parseWorkEventCatalog(markdown);
+    if (parsedEvents.length >= 20) {
+      workEventCatalog = parsedEvents;
+    }
+  } catch (error) {
+    console.warn("Using fallback work events:", error);
+  }
+}
+
+function parseWorkEventCatalog(markdown) {
+  const blocks = markdown.match(/### \d{2}\.[\s\S]*?(?=\n### \d{2}\.|\n## 4\.|$)/g) ?? [];
+  return blocks
+    .map((block) => parseWorkEventBlock(block))
+    .filter((event) => event && event.options.length >= 2);
+}
+
+function parseWorkEventBlock(block) {
+  const headerMatch = block.match(/###\s+(\d{2})\.\s+([^\n]+)/);
+  const rarityMatch = block.match(/- 稀有度：([^\n]+)/);
+  const descriptionMatch = block.match(/- 描述：([^\n]+)/);
+  if (!headerMatch || !rarityMatch || !descriptionMatch) {
+    return null;
+  }
+
+  const id = headerMatch[1];
+  const options = [];
+  const optionRegex = /- 选项\s+([A-Z])：([^\n]+)\n\s+- 精力\s+`([^`]+)`\n\s+- 压力\s+`([^`]+)`\n\s+- 资金\s+`([^`]+)`/g;
+  let optionMatch = optionRegex.exec(block);
+  while (optionMatch) {
+    options.push({
+      label: optionMatch[2].trim(),
+      energy: parseEventDelta(optionMatch[3], id, "energy"),
+      stress: parseEventDelta(optionMatch[4], id, "stress"),
+      money: parseEventDelta(optionMatch[5], id, "money"),
+    });
+    optionMatch = optionRegex.exec(block);
+  }
+
+  return {
+    id,
+    title: headerMatch[2].trim(),
+    rarity: rarityMatch[1].trim(),
+    description: descriptionMatch[1].trim(),
+    options,
+  };
+}
+
+function parseEventDelta(rawValue, eventId, kind) {
+  const numeric = Number(String(rawValue).replace("+", "").trim());
+  if (Number.isNaN(numeric)) {
+    return 0;
+  }
+  if (Number(eventId) >= 60) {
+    return numeric;
+  }
+
+  const factor = kind === "money" ? 1.5 : 1.25;
+  const scaled = numeric * factor;
+  if (kind === "money") {
+    return roundMoneyToTens(scaled);
+  }
+  return Math.round(scaled);
+}
+
+function roundMoneyToTens(value) {
+  return Math.sign(value) * Math.round(Math.abs(value) / 10) * 10;
+}
+
+function generateDailyWorkEvents() {
+  const selected = [];
+  const usedIds = new Set();
+
+  for (let slot = 0; slot < 3; slot += 1) {
+    const rarity = drawWorkEventRarity(slot, selected);
+    const event = pickWorkEventByRarity(rarity, usedIds);
+    if (!event) {
+      break;
+    }
+    usedIds.add(event.id);
+    selected.push(event);
+  }
+
+  while (selected.length < 3) {
+    const fallback = pickWorkEventByRarity("普通", usedIds);
+    if (!fallback) {
+      break;
+    }
+    usedIds.add(fallback.id);
+    selected.push(fallback);
+  }
+
+  return selected;
+}
+
+function drawWorkEventRarity(slotIndex, selectedEvents) {
+  if (slotIndex === 2 && !selectedEvents.some((event) => event.rarity === "普通" || event.rarity === "少见")) {
+    return weightedPick({ 普通: 60, 少见: 40, 稀有: 0, 极稀有: 0 });
+  }
+
+  const profile = { ...(WORK_EVENT_RARITY_PROFILES[slotIndex] ?? WORK_EVENT_RARITY_PROFILES[2]) };
+  if (selectedEvents.some((event) => event.rarity === "极稀有")) {
+    profile["极稀有"] = 0;
+  }
+  return weightedPick(profile);
+}
+
+function pickWorkEventByRarity(targetRarity, usedIds) {
+  const downgradeMap = {
+    极稀有: ["极稀有", "稀有", "少见", "普通"],
+    稀有: ["稀有", "少见", "普通"],
+    少见: ["少见", "普通"],
+    普通: ["普通", "少见", "稀有", "极稀有"],
+  };
+
+  for (const rarity of downgradeMap[targetRarity] ?? ["普通"]) {
+    const pool = workEventCatalog.filter((event) => event.rarity === rarity && !usedIds.has(event.id));
+    if (pool.length > 0) {
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+  }
+  return null;
+}
+
+function weightedPick(weightTable) {
+  const entries = Object.entries(weightTable).filter(([, weight]) => weight > 0);
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  if (total <= 0) {
+    return "普通";
+  }
+
+  let roll = Math.random() * total;
+  for (const [label, weight] of entries) {
+    roll -= weight;
+    if (roll <= 0) {
+      return label;
+    }
+  }
+  return entries[entries.length - 1][0];
+}
+
 function renderStoreCards() {
   const bedCards = Object.values(BEDS)
     .filter((bed) => bed.price > 0)
@@ -1107,7 +1456,7 @@ function addLog(targetState, text) {
 function checkEndConditions() {
   if (state.energy <= 0) {
     stopDozing();
-    state.working.busy = false;
+    resetWorkingState();
     state.morning.dozing = false;
     state.stage = "gameover";
     closeModal();
@@ -1116,7 +1465,7 @@ function checkEndConditions() {
   }
   if (state.stress >= 100) {
     stopDozing();
-    state.working.busy = false;
+    resetWorkingState();
     state.morning.dozing = false;
     state.stage = "gameover";
     closeModal();
@@ -1125,7 +1474,7 @@ function checkEndConditions() {
   }
   if (state.money >= MAX_MONEY) {
     stopDozing();
-    state.working.busy = false;
+    resetWorkingState();
     state.morning.dozing = false;
     state.stage = "victory";
     closeModal();
