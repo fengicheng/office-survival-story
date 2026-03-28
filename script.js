@@ -89,11 +89,11 @@ const ITEMS = {
     id: "energyDrink",
     name: "能量饮料",
     price: 150,
-    description: "精力 +18，压力 +5。",
+    description: "精力 +12，压力 +6。",
     canUse: (state) => state.stage === "morning" || state.stage === "night",
     use(state) {
       state.inventory.energyDrink -= 1;
-      const delta = applyDelta(state, { energy: 18, stress: 5 });
+      const delta = applyDelta(state, { energy: 12, stress: 6 });
       addLog(state, `喝下一罐能量饮料，精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。`);
     },
   },
