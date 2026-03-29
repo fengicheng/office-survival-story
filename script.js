@@ -67,7 +67,7 @@ const JOBS = {
     name: "普通公司",
     energyDelta: -22,
     stressDelta: 24,
-    moneyDelta: 380,
+    moneyDelta: 600,
     description: "标准平衡路线。",
   },
   grind: {
@@ -75,7 +75,7 @@ const JOBS = {
     name: "跳槽（卷）",
     energyDelta: -30,
     stressDelta: 32,
-    moneyDelta: 650,
+    moneyDelta: 900,
     switchCost: 5000,
     description: "高风险高收益，适合冲刺财富自由。",
   },
@@ -84,7 +84,7 @@ const JOBS = {
     name: "跳槽（松）",
     energyDelta: -14,
     stressDelta: 12,
-    moneyDelta: 280,
+    moneyDelta: 420,
     switchCost: 5000,
     description: "低风险低收益，适合保命。",
   },
@@ -178,7 +178,7 @@ const FALLBACK_WORK_EVENTS = [
     description: "老板罕见地请全员喝下午茶，大家表情复杂。",
     options: [
       { label: "接受并感谢", energy: 5, stress: -4, money: 0 },
-      { label: "怀疑有坑", energy: 0, stress: 3, money: 0 },
+      { label: "怀疑有坑", energy: 1, stress: -1, money: 0 },
     ],
   },
   {
