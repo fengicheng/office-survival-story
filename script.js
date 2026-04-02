@@ -17,6 +17,45 @@ const WORK_EVENT_RARITY_PROFILES = [
   { 普通: 45, 少见: 30, 稀有: 18, 极稀有: 7 },
   { 普通: 35, 少见: 32, 稀有: 23, 极稀有: 10 },
 ];
+const MINIGAMES = {
+  mole: {
+    id: "mole",
+    name: "打地鼠",
+    durationSeconds: 30,
+    fullScore: 40,
+    intro: "地鼠会给你加分，小猫会让你扣分。只打地鼠，别误伤小猫。",
+    rule: "点击地鼠 +1，点击小猫 -2。",
+    helper: "盯准再点，小猫会混在节奏里骗你出手。",
+  },
+  stack: {
+    id: "stack",
+    name: "叠箱子",
+    durationSeconds: 30,
+    fullScore: 12,
+    intro: "箱子会左右移动。看准位置再放下，越稳越容易叠高。",
+    rule: "成功叠 1 个 +1，完美落点额外 +0.5。",
+    helper: "偏差太大就会直接失手，节奏比手速更重要。",
+  },
+  balloon: {
+    id: "balloon",
+    name: "打气球",
+    durationSeconds: 30,
+    fullScore: 35,
+    intro: "普通气球和金色气球能得分，炸弹气球会扣分。",
+    rule: "普通气球 +1，金色气球 +2，炸弹气球 -2。",
+    helper: "别只顾着连点，炸弹气球就是专门坑手速怪的。",
+  },
+  memory: {
+    id: "memory",
+    name: "翻牌记忆",
+    durationSeconds: 35,
+    fullScore: 8,
+    intro: "在倒计时内尽量配对更多卡牌，不匹配只会浪费时间。",
+    rule: "每成功配对 1 组 +1。",
+    helper: "先记位置，再贪连击，别让节奏被误翻带乱。",
+  },
+};
+const MINIGAME_IDS = Object.keys(MINIGAMES);
 
 const BEDS = {
   wood: {
@@ -226,10 +265,11 @@ let bgmTrackIndex = 0;
 let bgmEnabled = true;
 let bgmUnlockBound = false;
 let workEventCatalog = [...FALLBACK_WORK_EVENTS];
+let activeMinigameIntervals = [];
+let activeMinigameTimeouts = [];
 
 bindEvents();
 setupBackgroundMusic();
-loadWorkEventCatalog();
 render();
 
 function bindEvents() {
@@ -239,6 +279,8 @@ function bindEvents() {
       return;
     }
     stopDozing();
+    clearMinigameSchedulers();
+    closeModal();
     state = createInitialState();
     saveState();
     render();
@@ -373,8 +415,14 @@ function createInitialState() {
     working: {
       busy: false,
       phase: "idle",
-      dailyEvents: [],
-      currentEventIndex: 0,
+      currentMinigameId: null,
+      lastMinigameId: null,
+      score: 0,
+      fullScore: 0,
+      incomeMultiplier: 1,
+      finalIncome: 0,
+      minigameStartedAt: 0,
+      runtimeData: null,
     },
     log: [],
   };
@@ -414,8 +462,14 @@ function withDefaults(candidate) {
       ...(candidate.working ?? {}),
       busy: false,
       phase: "idle",
-      dailyEvents: [],
-      currentEventIndex: 0,
+      currentMinigameId: null,
+      score: 0,
+      fullScore: 0,
+      incomeMultiplier: 1,
+      finalIncome: 0,
+      minigameStartedAt: 0,
+      runtimeData: null,
+      lastMinigameId: candidate.working?.lastMinigameId ?? null,
     },
     log: Array.isArray(candidate.log) ? candidate.log.slice(0, 18) : initial.log,
     morning: {
@@ -512,17 +566,15 @@ function getSceneCopy() {
   }
 
   if (state.stage === "working") {
-    const totalEvents = state.working.dailyEvents?.length ?? 0;
-    const currentStep = Math.min(totalEvents, state.working.currentEventIndex + 1);
-
-    if (state.working.phase === "events" && totalEvents > 0) {
+    if (state.working.phase === "intro" || state.working.phase === "playing" || state.working.phase === "result") {
+      const game = MINIGAMES[state.working.currentMinigameId] ?? { name: "小游戏" };
       return {
-        title: `工作随机事件 ${currentStep}/${totalEvents}`,
-        tag: "Working Event",
+        title: `${game.name} 进行中`,
+        tag: "Working Game",
         visual: "working",
-        description: "上班从来不只是扣一条体力条那么简单。今天的随机事故、会议和烂活正在排队等你选。",
-        tip: "每天工作阶段会出现 3 个随机事件。每个选择都会影响精力、压力和资金。",
-        visualCopy: "今天最累的，未必是基础工作量，而是那些突然砸下来的事。",
+        description: `今天的工作先被压缩成了一局【${game.name}】。结果会影响今日工资，打完才能继续结算。`,
+        tip: "小游戏进行中时无法打开商店，也不能直接跳过结算。",
+        visualCopy: "班没少上，只是先换了种更直接的折磨方式。",
       };
     }
 
@@ -531,9 +583,9 @@ function getSceneCopy() {
         title: "正在努力搬砖",
         tag: "Working",
         visual: "working",
-        description: "三个随机事件刚结束，你正把今天剩下的标准工作量硬生生扛完。",
-        tip: "工作随机事件会先结算，再进入当天基础工作结算。",
-        visualCopy: "事情处理完了，班还没上完。",
+        description: "你正把今天的标准工作量硬生生扛完，等着下班结算。",
+        tip: "工作阶段无法打开商店，结算完成后才会进入夜晚。",
+        visualCopy: "班还没上完，但人已经先累了。",
       };
     }
 
@@ -541,8 +593,8 @@ function getSceneCopy() {
       title: "准备上班",
       tag: "Working",
       visual: "working",
-      description: "开始工作后，你会先遭遇 3 个随机工作事件，再结算当天的基础体力、压力和工资。",
-      tip: "工作阶段无法打开商店。随机事件每天都会不一样，而且越往后越容易抽到高等级事件。",
+      description: "点击开始工作后，会随机进入 1 个小游戏，结果将影响今日工资。",
+      tip: "工作阶段无法打开商店。小游戏结束后才会进入正式结算。",
       visualCopy: "你看起来很忙，事实上也确实很忙。",
     };
   }
@@ -600,11 +652,11 @@ function renderActions() {
   } else if (state.stage === "working") {
     actions.push({
       label:
-        state.working.phase === "events"
-          ? "事件处理中..."
-          : state.working.phase === "settling"
-            ? "正在搬砖..."
-            : "开始今天的工作",
+        state.working.phase === "settling"
+          ? "正在搬砖..."
+          : state.working.phase === "idle"
+            ? "开始今天的工作"
+            : "小游戏进行中...",
       onClick: resolveWorkDay,
       disabled: state.working.busy || state.working.phase !== "idle",
     });
@@ -617,6 +669,8 @@ function renderActions() {
       label: "重新开局",
       onClick: () => {
         stopDozing();
+        clearMinigameSchedulers();
+        closeModal();
         state = createInitialState();
         render();
       },
@@ -713,12 +767,241 @@ function resolveWorkDay() {
   }
 
   state.working.busy = true;
-  state.working.phase = "events";
-  state.working.dailyEvents = generateDailyWorkEvents();
-  state.working.currentEventIndex = 0;
-  addLog(state, `今天的班刚开始，先砸来了 ${state.working.dailyEvents.length} 个随机工作事件。`);
+  addLog(state, "今天的班开始了。");
+  const minigameId = pickDailyMinigame(state.working.lastMinigameId);
+  const game = MINIGAMES[minigameId];
+  state.working.phase = "intro";
+  state.working.currentMinigameId = minigameId;
+  state.working.lastMinigameId = minigameId;
+  state.working.score = 0;
+  state.working.fullScore = game.fullScore;
+  state.working.incomeMultiplier = 1;
+  state.working.finalIncome = JOBS[state.jobType].moneyDelta;
+  state.working.minigameStartedAt = 0;
+  state.working.runtimeData = null;
+  addLog(state, `今天的任务是小游戏【${game.name}】。`);
   render();
-  openCurrentWorkEvent();
+  openMinigameIntro(minigameId);
+}
+
+function pickDailyMinigame(lastMinigameId) {
+  const first = randomPick(MINIGAME_IDS);
+  if (first !== lastMinigameId) {
+    return first;
+  }
+  return randomPick(MINIGAME_IDS);
+}
+
+function randomPick(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function openMinigameIntro(minigameId) {
+  const game = MINIGAMES[minigameId];
+  if (!game) {
+    resolveBaseWorkSettlement(JOBS[state.jobType].moneyDelta);
+    return;
+  }
+
+  openModal(
+    `
+      <div class="modal-card minigame-card">
+        <p class="eyebrow">Today's Work</p>
+        <h3>${game.name}</h3>
+        <p>${game.intro}</p>
+        <div class="modal-grid">
+          <div class="modal-section">
+            <strong>时长</strong>
+            <p>${game.durationSeconds} 秒</p>
+          </div>
+          <div class="modal-section">
+            <strong>满分</strong>
+            <p>${formatScore(game.fullScore)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>规则</strong>
+            <p>${game.rule}</p>
+          </div>
+          <div class="modal-section">
+            <strong>工资结算</strong>
+            <p>满分 x1.3；低于 70% x0.8；其余 x1.0。</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="start-minigame" class="modal-btn">开始</button>
+        </div>
+      </div>
+    `,
+    () => {
+      document.querySelector("#start-minigame")?.addEventListener("click", () => startMinigame(minigameId));
+    },
+  );
+}
+
+function startMinigame(minigameId) {
+  const game = MINIGAMES[minigameId];
+  if (!game) {
+    return;
+  }
+
+  state.working.phase = "playing";
+  state.working.minigameStartedAt = Date.now();
+  state.working.score = 0;
+  state.working.fullScore = game.fullScore;
+  clearMinigameSchedulers();
+  render();
+  MINIGAME_RUNNERS[minigameId]?.();
+}
+
+function buildMinigameShell(game, extraClass = "", controlsHtml = "") {
+  return `
+    <div class="modal-card minigame-card">
+      <div class="minigame-top">
+        <div>
+          <p class="eyebrow">Today's Work</p>
+          <h3>${game.name}</h3>
+          <p>${game.helper}</p>
+        </div>
+        <span class="scene-tag minigame-tag">小游戏</span>
+      </div>
+      <div class="minigame-stats">
+        <div class="modal-section">
+          <strong>倒计时</strong>
+          <p id="minigame-timer">${game.durationSeconds.toFixed(1)} 秒</p>
+        </div>
+        <div class="modal-section">
+          <strong>当前分数</strong>
+          <p><span id="minigame-score">0</span> / <span id="minigame-full-score">${formatScore(game.fullScore)}</span></p>
+        </div>
+      </div>
+      <div id="minigame-stage" class="minigame-stage ${extraClass}"></div>
+      ${controlsHtml ? `<div class="modal-actions minigame-controls">${controlsHtml}</div>` : ""}
+    </div>
+  `;
+}
+
+function updateMinigameHud(score, timeLeftMs, fullScore) {
+  const scoreNode = document.querySelector("#minigame-score");
+  const timerNode = document.querySelector("#minigame-timer");
+  const fullScoreNode = document.querySelector("#minigame-full-score");
+  if (scoreNode) {
+    scoreNode.textContent = formatScore(score);
+  }
+  if (timerNode) {
+    timerNode.textContent = `${Math.max(0, timeLeftMs) / 1000 >= 10 ? "" : ""}${(Math.max(0, timeLeftMs) / 1000).toFixed(1)} 秒`;
+  }
+  if (fullScoreNode) {
+    fullScoreNode.textContent = formatScore(fullScore);
+  }
+}
+
+function finishMinigame({ score, fullScore }) {
+  if (state.working.phase !== "playing") {
+    return;
+  }
+
+  clearMinigameSchedulers();
+  const cappedFullScore = Math.max(1, round2(fullScore ?? state.working.fullScore ?? 1));
+  const normalizedScore = clamp(round2(score ?? 0), 0, cappedFullScore);
+  const ratio = normalizedScore / cappedFullScore;
+  const incomeMultiplier = getIncomeMultiplier(normalizedScore, cappedFullScore);
+  const finalIncome = Math.round(JOBS[state.jobType].moneyDelta * incomeMultiplier);
+
+  state.working.phase = "result";
+  state.working.score = normalizedScore;
+  state.working.fullScore = cappedFullScore;
+  state.working.incomeMultiplier = incomeMultiplier;
+  state.working.finalIncome = finalIncome;
+  state.working.runtimeData = null;
+
+  addLog(
+    state,
+    `小游戏结算：${formatScore(normalizedScore)}/${formatScore(cappedFullScore)}，达成率 ${Math.round(clamp(ratio, 0, 1) * 100)}%，工资倍率 x${incomeMultiplier.toFixed(1)}。`,
+  );
+  if (incomeMultiplier === 1.3) {
+    addLog(state, "发挥出色，今日工资提升到 130%。");
+  } else if (incomeMultiplier === 0.8) {
+    addLog(state, "发挥失常，今日工资降为 80%。");
+  }
+
+  render();
+  showMinigameResult();
+}
+
+function showMinigameResult() {
+  const game = MINIGAMES[state.working.currentMinigameId];
+  const job = JOBS[state.jobType];
+  const ratio = state.working.fullScore <= 0 ? 0 : state.working.score / state.working.fullScore;
+  openModal(
+    `
+      <div class="modal-card minigame-card">
+        <p class="eyebrow">Work Result</p>
+        <h3>${game?.name ?? "小游戏"} 结算</h3>
+        <div class="modal-grid">
+          <div class="modal-section">
+            <strong>成绩</strong>
+            <p>${formatScore(state.working.score)} / ${formatScore(state.working.fullScore)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>达成率</strong>
+            <p>${Math.round(clamp(ratio, 0, 1) * 100)}%</p>
+          </div>
+          <div class="modal-section">
+            <strong>基础工资</strong>
+            <p>${job.moneyDelta}</p>
+          </div>
+          <div class="modal-section">
+            <strong>最终工资</strong>
+            <p>${state.working.finalIncome}（x${state.working.incomeMultiplier.toFixed(1)}）</p>
+          </div>
+        </div>
+        <div class="modal-grid">
+          <div class="modal-section">
+            <strong>今日工作消耗</strong>
+            <p>精力 ${formatSigned(job.energyDelta)}，压力 ${formatSigned(job.stressDelta)}。</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="continue-work-settlement" class="modal-btn">继续结算</button>
+        </div>
+      </div>
+    `,
+    () => {
+      document
+        .querySelector("#continue-work-settlement")
+        ?.addEventListener("click", () => resolveBaseWorkSettlement(state.working.finalIncome));
+    },
+  );
+}
+
+function getIncomeMultiplier(score, fullScore) {
+  const ratio = fullScore <= 0 ? 0 : score / fullScore;
+  if (ratio >= 1) {
+    return 1.3;
+  }
+  if (ratio < 0.7) {
+    return 0.8;
+  }
+  return 1;
+}
+
+function clearMinigameSchedulers() {
+  activeMinigameIntervals.forEach((id) => window.clearInterval(id));
+  activeMinigameTimeouts.forEach((id) => window.clearTimeout(id));
+  activeMinigameIntervals = [];
+  activeMinigameTimeouts = [];
+}
+
+function scheduleMinigameInterval(callback, delay) {
+  const id = window.setInterval(callback, delay);
+  activeMinigameIntervals.push(id);
+  return id;
+}
+
+function scheduleMinigameTimeout(callback, delay) {
+  const id = window.setTimeout(callback, delay);
+  activeMinigameTimeouts.push(id);
+  return id;
 }
 
 function openCurrentWorkEvent() {
@@ -799,7 +1082,9 @@ function chooseWorkEventOption(optionIndex) {
   openCurrentWorkEvent();
 }
 
-function resolveBaseWorkSettlement() {
+function resolveBaseWorkSettlement(incomeOverride = JOBS[state.jobType].moneyDelta) {
+  closeModal();
+  clearMinigameSchedulers();
   state.working.phase = "settling";
   render();
 
@@ -808,7 +1093,7 @@ function resolveBaseWorkSettlement() {
     const delta = applyDelta(state, {
       energy: job.energyDelta,
       stress: job.stressDelta,
-      money: job.moneyDelta,
+      money: incomeOverride,
     });
     state.currentTime = NIGHT_START;
     state.stage = "night";
@@ -827,10 +1112,18 @@ function resolveBaseWorkSettlement() {
 }
 
 function resetWorkingState() {
+  clearMinigameSchedulers();
+  const lastMinigameId = state.working.lastMinigameId ?? null;
   state.working.busy = false;
   state.working.phase = "idle";
-  state.working.dailyEvents = [];
-  state.working.currentEventIndex = 0;
+  state.working.currentMinigameId = null;
+  state.working.lastMinigameId = lastMinigameId;
+  state.working.score = 0;
+  state.working.fullScore = 0;
+  state.working.incomeMultiplier = 1;
+  state.working.finalIncome = 0;
+  state.working.minigameStartedAt = 0;
+  state.working.runtimeData = null;
 }
 
 function startDozing() {
@@ -1320,6 +1613,476 @@ function weightedPick(weightTable) {
   return entries[entries.length - 1][0];
 }
 
+const MINIGAME_RUNNERS = {
+  mole: startMoleMinigame,
+  stack: startStackMinigame,
+  balloon: startBalloonMinigame,
+  memory: startMemoryMinigame,
+};
+
+function startMoleMinigame() {
+  const game = MINIGAMES.mole;
+  state.working.runtimeData = {
+    score: 0,
+    timeLeftMs: game.durationSeconds * 1000,
+    currentSlot: null,
+    currentKind: null,
+  };
+
+  openModal(buildMinigameShell(game, "mole-stage"), () => {
+    const stage = document.querySelector("#minigame-stage");
+    if (!stage) {
+      return;
+    }
+
+    stage.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-hole-index]");
+      if (!button || state.working.phase !== "playing") {
+        return;
+      }
+      const runtime = state.working.runtimeData;
+      const index = Number(button.getAttribute("data-hole-index"));
+      if (runtime.currentSlot !== index) {
+        return;
+      }
+
+      runtime.score = round2(runtime.score + (runtime.currentKind === "mole" ? 1 : -2));
+      runtime.currentSlot = null;
+      runtime.currentKind = null;
+      renderMoleStage();
+      updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+    });
+
+    const startedAt = Date.now();
+    const tickTimer = scheduleMinigameInterval(() => {
+      const runtime = state.working.runtimeData;
+      if (!runtime || state.working.phase !== "playing") {
+        return;
+      }
+      runtime.timeLeftMs = Math.max(0, game.durationSeconds * 1000 - (Date.now() - startedAt));
+      updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+      if (runtime.timeLeftMs <= 0) {
+        finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+      }
+    }, 100);
+
+    const spawnLoop = () => {
+      const runtime = state.working.runtimeData;
+      if (!runtime || state.working.phase !== "playing") {
+        return;
+      }
+      const progress = 1 - runtime.timeLeftMs / (game.durationSeconds * 1000);
+      runtime.currentSlot = Math.floor(Math.random() * 9);
+      runtime.currentKind = Math.random() < 0.26 ? "cat" : "mole";
+      renderMoleStage();
+
+      const nextDelay = Math.max(280, 640 - progress * 280);
+      scheduleMinigameTimeout(spawnLoop, nextDelay);
+    };
+
+    updateMinigameHud(0, game.durationSeconds * 1000, game.fullScore);
+    renderMoleStage();
+    scheduleMinigameTimeout(spawnLoop, 180);
+
+    function renderMoleStage() {
+      const runtime = state.working.runtimeData;
+      if (!runtime || !stage) {
+        return;
+      }
+      stage.innerHTML = `
+        <div class="mole-grid">
+          ${Array.from({ length: 9 }, (_, index) => {
+            const isActive = runtime.currentSlot === index;
+            const typeClass = isActive ? ` ${runtime.currentKind}` : "";
+            const label = isActive ? (runtime.currentKind === "mole" ? "鼠" : "猫") : "";
+            return `<button class="mole-hole${typeClass}" data-hole-index="${index}">${label}</button>`;
+          }).join("")}
+        </div>
+      `;
+    }
+  });
+}
+
+function startBalloonMinigame() {
+  const game = MINIGAMES.balloon;
+  state.working.runtimeData = {
+    score: 0,
+    timeLeftMs: game.durationSeconds * 1000,
+    nextId: 1,
+    balloons: [],
+  };
+
+  openModal(buildMinigameShell(game, "balloon-stage"), () => {
+    const stage = document.querySelector("#minigame-stage");
+    if (!stage) {
+      return;
+    }
+
+    stage.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-balloon-id]");
+      if (!button || state.working.phase !== "playing") {
+        return;
+      }
+      const runtime = state.working.runtimeData;
+      const balloonId = Number(button.getAttribute("data-balloon-id"));
+      const index = runtime.balloons.findIndex((item) => item.id === balloonId);
+      if (index < 0) {
+        return;
+      }
+      const balloon = runtime.balloons[index];
+      runtime.score = round2(runtime.score + balloon.score);
+      runtime.balloons.splice(index, 1);
+      renderBalloonStage();
+      updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+    });
+
+    const startedAt = Date.now();
+    scheduleMinigameInterval(() => {
+      const runtime = state.working.runtimeData;
+      if (!runtime || state.working.phase !== "playing") {
+        return;
+      }
+      runtime.timeLeftMs = Math.max(0, game.durationSeconds * 1000 - (Date.now() - startedAt));
+      updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+      if (runtime.timeLeftMs <= 0) {
+        finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+      }
+    }, 100);
+
+    scheduleMinigameInterval(() => {
+      const runtime = state.working.runtimeData;
+      if (!runtime || state.working.phase !== "playing") {
+        return;
+      }
+      runtime.balloons = runtime.balloons
+        .map((balloon) => ({ ...balloon, bottom: balloon.bottom + balloon.speed }))
+        .filter((balloon) => balloon.bottom < 330);
+      renderBalloonStage();
+    }, 50);
+
+    const spawnBalloon = () => {
+      const runtime = state.working.runtimeData;
+      if (!runtime || state.working.phase !== "playing") {
+        return;
+      }
+      runtime.balloons.push(createBalloon(runtime.nextId));
+      runtime.nextId += 1;
+      renderBalloonStage();
+
+      const progress = 1 - runtime.timeLeftMs / (game.durationSeconds * 1000);
+      const nextDelay = Math.max(180, 520 - progress * 180);
+      scheduleMinigameTimeout(spawnBalloon, nextDelay);
+    };
+
+    updateMinigameHud(0, game.durationSeconds * 1000, game.fullScore);
+    renderBalloonStage();
+    scheduleMinigameTimeout(spawnBalloon, 120);
+
+    function renderBalloonStage() {
+      const runtime = state.working.runtimeData;
+      if (!runtime) {
+        return;
+      }
+      stage.innerHTML = `
+        <div class="balloon-field">
+          ${runtime.balloons
+            .map(
+              (balloon) => `
+                <button
+                  class="balloon ${balloon.type}"
+                  data-balloon-id="${balloon.id}"
+                  style="left: ${balloon.left}%; bottom: ${balloon.bottom}px; width: ${balloon.size}px; height: ${balloon.size + 10}px;"
+                >
+                  <span>${balloon.label}</span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      `;
+    }
+  });
+}
+
+function createBalloon(id) {
+  const roll = Math.random();
+  if (roll < 0.18) {
+    return {
+      id,
+      type: "bomb",
+      label: "炸",
+      score: -2,
+      left: 5 + Math.random() * 82,
+      bottom: -30,
+      size: 56 + Math.random() * 12,
+      speed: 2.1 + Math.random() * 1.2,
+    };
+  }
+  if (roll < 0.35) {
+    return {
+      id,
+      type: "gold",
+      label: "金",
+      score: 2,
+      left: 5 + Math.random() * 82,
+      bottom: -30,
+      size: 54 + Math.random() * 10,
+      speed: 1.7 + Math.random() * 1.1,
+    };
+  }
+  return {
+    id,
+    type: "normal",
+    label: "气",
+    score: 1,
+    left: 5 + Math.random() * 82,
+    bottom: -30,
+    size: 52 + Math.random() * 14,
+    speed: 1.5 + Math.random() * 1,
+  };
+}
+
+function startMemoryMinigame() {
+  const game = MINIGAMES.memory;
+  const symbols = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const cards = shuffle(symbols.flatMap((symbol) => [symbol, symbol])).map((symbol, index) => ({
+    id: index,
+    symbol,
+    state: "closed",
+  }));
+
+  state.working.runtimeData = {
+    score: 0,
+    timeLeftMs: game.durationSeconds * 1000,
+    cards,
+    openIndexes: [],
+    lock: false,
+  };
+
+  openModal(buildMinigameShell(game, "memory-stage"), () => {
+    const stage = document.querySelector("#minigame-stage");
+    if (!stage) {
+      return;
+    }
+
+    stage.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-card-index]");
+      const runtime = state.working.runtimeData;
+      if (!button || !runtime || runtime.lock || state.working.phase !== "playing") {
+        return;
+      }
+
+      const index = Number(button.getAttribute("data-card-index"));
+      const card = runtime.cards[index];
+      if (!card || card.state !== "closed") {
+        return;
+      }
+
+      card.state = "open";
+      runtime.openIndexes.push(index);
+      renderMemoryStage();
+
+      if (runtime.openIndexes.length < 2) {
+        return;
+      }
+
+      runtime.lock = true;
+      scheduleMinigameTimeout(() => {
+        const [firstIndex, secondIndex] = runtime.openIndexes;
+        const first = runtime.cards[firstIndex];
+        const second = runtime.cards[secondIndex];
+        if (first?.symbol === second?.symbol) {
+          first.state = "matched";
+          second.state = "matched";
+          runtime.score = round2(runtime.score + 1);
+        } else {
+          first.state = "closed";
+          second.state = "closed";
+        }
+        runtime.openIndexes = [];
+        runtime.lock = false;
+        updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+        renderMemoryStage();
+        if (runtime.score >= game.fullScore) {
+          finishMinigame({ score: game.fullScore, fullScore: game.fullScore });
+        }
+      }, 550);
+    });
+
+    const startedAt = Date.now();
+    scheduleMinigameInterval(() => {
+      const runtime = state.working.runtimeData;
+      if (!runtime || state.working.phase !== "playing") {
+        return;
+      }
+      runtime.timeLeftMs = Math.max(0, game.durationSeconds * 1000 - (Date.now() - startedAt));
+      updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+      if (runtime.timeLeftMs <= 0) {
+        finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+      }
+    }, 100);
+
+    updateMinigameHud(0, game.durationSeconds * 1000, game.fullScore);
+    renderMemoryStage();
+
+    function renderMemoryStage() {
+      const runtime = state.working.runtimeData;
+      if (!runtime) {
+        return;
+      }
+      stage.innerHTML = `
+        <div class="memory-grid">
+          ${runtime.cards
+            .map((card, index) => {
+              const isOpen = card.state === "open" || card.state === "matched";
+              const label = isOpen ? card.symbol : "?";
+              return `
+                <button class="memory-card ${card.state}" data-card-index="${index}">
+                  <span>${label}</span>
+                </button>
+              `;
+            })
+            .join("")}
+        </div>
+      `;
+    }
+  });
+}
+
+function startStackMinigame() {
+  const game = MINIGAMES.stack;
+  state.working.runtimeData = {
+    score: 0,
+    timeLeftMs: game.durationSeconds * 1000,
+    blocks: [{ left: 20, width: 60 }],
+    current: {
+      left: 0,
+      width: 60,
+      direction: 1,
+      speed: 2.2,
+    },
+  };
+
+  openModal(
+    buildMinigameShell(
+      game,
+      "stack-stage",
+      `<button id="stack-drop-btn" class="modal-btn">放下箱子</button>`,
+    ),
+    () => {
+      const stage = document.querySelector("#minigame-stage");
+      const dropBtn = document.querySelector("#stack-drop-btn");
+      if (!stage || !dropBtn) {
+        return;
+      }
+
+      const drop = () => {
+        const runtime = state.working.runtimeData;
+        if (!runtime || state.working.phase !== "playing") {
+          return;
+        }
+
+        const topBlock = runtime.blocks[runtime.blocks.length - 1];
+        const current = runtime.current;
+        const overlap = Math.min(current.left + current.width, topBlock.left + topBlock.width) - Math.max(current.left, topBlock.left);
+        if (overlap <= 0) {
+          finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+          return;
+        }
+
+        const overlapLeft = Math.max(current.left, topBlock.left);
+        const centerDelta = Math.abs((current.left + current.width / 2) - (topBlock.left + topBlock.width / 2));
+        const perfect = centerDelta <= 2;
+        runtime.score = round2(runtime.score + 1 + (perfect ? 0.5 : 0));
+        runtime.blocks.push({ left: overlapLeft, width: overlap });
+
+        if (runtime.score >= game.fullScore) {
+          renderStackStage();
+          finishMinigame({ score: game.fullScore, fullScore: game.fullScore });
+          return;
+        }
+
+        runtime.current = {
+          left: Math.random() > 0.5 ? 0 : 100 - overlap,
+          width: overlap,
+          direction: Math.random() > 0.5 ? 1 : -1,
+          speed: Math.min(4.6, current.speed + 0.16),
+        };
+        updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+        renderStackStage();
+      };
+
+      dropBtn.addEventListener("click", drop);
+      stage.addEventListener("click", drop);
+
+      const startedAt = Date.now();
+      scheduleMinigameInterval(() => {
+        const runtime = state.working.runtimeData;
+        if (!runtime || state.working.phase !== "playing") {
+          return;
+        }
+        runtime.timeLeftMs = Math.max(0, game.durationSeconds * 1000 - (Date.now() - startedAt));
+        updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+        if (runtime.timeLeftMs <= 0) {
+          finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+        }
+      }, 100);
+
+      scheduleMinigameInterval(() => {
+        const runtime = state.working.runtimeData;
+        if (!runtime || state.working.phase !== "playing") {
+          return;
+        }
+        const current = runtime.current;
+        current.left = clamp(current.left + current.direction * current.speed, 0, 100 - current.width);
+        if (current.left <= 0 || current.left >= 100 - current.width) {
+          current.direction *= -1;
+        }
+        renderStackStage();
+      }, 40);
+
+      updateMinigameHud(0, game.durationSeconds * 1000, game.fullScore);
+      renderStackStage();
+
+      function renderStackStage() {
+        const runtime = state.working.runtimeData;
+        if (!runtime) {
+          return;
+        }
+
+        const currentBottom = runtime.blocks.length * 16;
+        stage.innerHTML = `
+          <div class="stack-field">
+            ${runtime.blocks
+              .map(
+                (block, index) => `
+                  <div
+                    class="stack-block settled"
+                    style="left: ${block.left}%; width: ${block.width}%; bottom: ${index * 16}px;"
+                  ></div>
+                `,
+              )
+              .join("")}
+            <div
+              class="stack-block moving"
+              style="left: ${runtime.current.left}%; width: ${runtime.current.width}%; bottom: ${currentBottom}px;"
+            ></div>
+          </div>
+        `;
+      }
+    },
+  );
+}
+
+function shuffle(items) {
+  const cloned = [...items];
+  for (let index = cloned.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [cloned[index], cloned[swapIndex]] = [cloned[swapIndex], cloned[index]];
+  }
+  return cloned;
+}
+
 function renderStoreCards() {
   const bedCards = Object.values(BEDS)
     .filter((bed) => bed.price > 0)
@@ -1521,6 +2284,10 @@ function formatSigned(value) {
 
 function formatNumber(value) {
   return round2(value).toFixed(2).replace(/\.00$/, "");
+}
+
+function formatScore(value) {
+  return round2(value).toFixed(1).replace(/\.0$/, "");
 }
 
 function round2(value) {

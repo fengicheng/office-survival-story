@@ -475,6 +475,202 @@ h2 {
   font-weight: 700;
 }
 
+.minigame-card {
+  width: min(820px, 100%);
+}
+
+.minigame-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.minigame-tag {
+  flex-shrink: 0;
+}
+
+.minigame-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.minigame-stage {
+  margin-top: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(44, 31, 24, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 45%),
+    linear-gradient(180deg, rgba(255, 248, 239, 0.9), rgba(244, 231, 216, 0.98));
+  overflow: hidden;
+}
+
+.minigame-controls {
+  margin-top: 18px;
+}
+
+.mole-stage {
+  padding: 18px;
+}
+
+.mole-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mole-hole {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.5), transparent 30%),
+    linear-gradient(180deg, #6f4d3c, #4f3428);
+  box-shadow:
+    inset 0 -12px 18px rgba(14, 8, 6, 0.28),
+    0 10px 20px rgba(44, 31, 24, 0.12);
+  color: #fff;
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mole-hole.mole {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.55), transparent 28%),
+    linear-gradient(180deg, #d87f42, #b24d2d);
+}
+
+.mole-hole.cat {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.6), transparent 30%),
+    linear-gradient(180deg, #4f6fa6, #324266);
+}
+
+.balloon-stage {
+  height: 340px;
+}
+
+.balloon-field,
+.stack-field {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.balloon-field {
+  min-height: 340px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 35%),
+    linear-gradient(180deg, rgba(189, 80, 52, 0.08), rgba(31, 122, 87, 0.08));
+}
+
+.balloon {
+  position: absolute;
+  border: none;
+  border-radius: 999px 999px 999px 999px / 100% 100% 82% 82%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(44, 31, 24, 0.18);
+}
+
+.balloon::after {
+  content: "";
+  position: absolute;
+  bottom: -18px;
+  width: 2px;
+  height: 18px;
+  background: rgba(44, 31, 24, 0.28);
+}
+
+.balloon.normal {
+  background: linear-gradient(180deg, #ff9060, #d8583a);
+}
+
+.balloon.gold {
+  background: linear-gradient(180deg, #f2c14e, #d99618);
+}
+
+.balloon.bomb {
+  background: linear-gradient(180deg, #495268, #22293c);
+}
+
+.memory-stage {
+  padding: 18px;
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.memory-card {
+  aspect-ratio: 0.82;
+  border: none;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #3e5079, #27314b);
+  color: #fff;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(44, 31, 24, 0.16);
+}
+
+.memory-card.open {
+  background: linear-gradient(180deg, #fff5e8, #f2dfc3);
+  color: #8f452f;
+}
+
+.memory-card.matched {
+  background: linear-gradient(180deg, #d7f5e6, #b7e3cf);
+  color: #1f7a57;
+}
+
+.stack-stage {
+  height: 320px;
+  cursor: pointer;
+}
+
+.stack-field {
+  min-height: 320px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 35%),
+    linear-gradient(180deg, rgba(31, 63, 87, 0.08), rgba(31, 63, 87, 0.14));
+}
+
+.stack-field::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28px;
+  background: linear-gradient(180deg, rgba(44, 31, 24, 0.08), rgba(44, 31, 24, 0.18));
+}
+
+.stack-block {
+  position: absolute;
+  height: 14px;
+  border-radius: 999px;
+  transform: translateX(0);
+}
+
+.stack-block.settled {
+  background: linear-gradient(90deg, #c46948, #a64135);
+  box-shadow: 0 8px 18px rgba(166, 65, 53, 0.22);
+}
+
+.stack-block.moving {
+  background: linear-gradient(90deg, #4d66b0, #2f467a);
+  box-shadow: 0 10px 22px rgba(47, 70, 122, 0.26);
+}
+
 @media (max-width: 860px) {
   .hero,
   .status-top {
@@ -490,5 +686,16 @@ h2 {
   .money-block,
   .clock-block {
     text-align: left;
+  }
+
+  .minigame-stats,
+  .memory-grid,
+  .mole-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memory-card:last-child:nth-child(odd),
+  .mole-hole:last-child:nth-child(odd) {
+    grid-column: span 2;
   }
 }
