@@ -32,9 +32,9 @@ const MINIGAMES = {
     name: "叠箱子",
     durationSeconds: 30,
     fullScore: 12,
-    intro: "箱子会左右移动。看准位置再放下，越稳越容易叠高。",
-    rule: "成功叠 1 个 +1，完美落点额外 +0.5。",
-    helper: "偏差太大就会直接失手，节奏比手速更重要。",
+    intro: "正方形木箱会在上方左右移动。点击后木箱会受重力下落，落点不稳就会直接砸歪。",
+    rule: "稳稳叠上 1 个 +1，近乎完美落点额外 +0.5。",
+    helper: "这次木箱真的会往下坠，太偏就撑不住了。",
   },
   balloon: {
     id: "balloon",
@@ -1718,11 +1718,12 @@ function startBalloonMinigame() {
       return;
     }
 
-    stage.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-balloon-id]");
+    stage.addEventListener("pointerdown", (event) => {
+      const button = event.target.closest(".balloon");
       if (!button || state.working.phase !== "playing") {
         return;
       }
+      event.preventDefault();
       const runtime = state.working.runtimeData;
       const balloonId = Number(button.getAttribute("data-balloon-id"));
       const index = runtime.balloons.findIndex((item) => item.id === balloonId);
@@ -1951,15 +1952,25 @@ function startMemoryMinigame() {
 
 function startStackMinigame() {
   const game = MINIGAMES.stack;
+  const groundHeight = 28;
+  const fieldHeight = 320;
+  const boxSize = 56;
   state.working.runtimeData = {
     score: 0,
     timeLeftMs: game.durationSeconds * 1000,
-    blocks: [{ left: 20, width: 60 }],
+    fieldHeight,
+    groundHeight,
+    boxSize,
+    fieldWidth: 0,
+    blocks: [],
     current: {
       left: 0,
-      width: 60,
+      top: 12,
+      size: boxSize,
       direction: 1,
-      speed: 2.2,
+      speed: 3.4,
+      dropping: false,
+      velocityY: 0,
     },
   };
 
@@ -1976,40 +1987,19 @@ function startStackMinigame() {
         return;
       }
 
+      initializeStackField();
+
       const drop = () => {
         const runtime = state.working.runtimeData;
         if (!runtime || state.working.phase !== "playing") {
           return;
         }
-
-        const topBlock = runtime.blocks[runtime.blocks.length - 1];
         const current = runtime.current;
-        const overlap = Math.min(current.left + current.width, topBlock.left + topBlock.width) - Math.max(current.left, topBlock.left);
-        if (overlap <= 0) {
-          finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+        if (current.dropping) {
           return;
         }
-
-        const overlapLeft = Math.max(current.left, topBlock.left);
-        const centerDelta = Math.abs((current.left + current.width / 2) - (topBlock.left + topBlock.width / 2));
-        const perfect = centerDelta <= 2;
-        runtime.score = round2(runtime.score + 1 + (perfect ? 0.5 : 0));
-        runtime.blocks.push({ left: overlapLeft, width: overlap });
-
-        if (runtime.score >= game.fullScore) {
-          renderStackStage();
-          finishMinigame({ score: game.fullScore, fullScore: game.fullScore });
-          return;
-        }
-
-        runtime.current = {
-          left: Math.random() > 0.5 ? 0 : 100 - overlap,
-          width: overlap,
-          direction: Math.random() > 0.5 ? 1 : -1,
-          speed: Math.min(4.6, current.speed + 0.16),
-        };
-        updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
-        renderStackStage();
+        current.dropping = true;
+        current.velocityY = 1.2;
       };
 
       dropBtn.addEventListener("click", drop);
@@ -2034,38 +2024,117 @@ function startStackMinigame() {
           return;
         }
         const current = runtime.current;
-        current.left = clamp(current.left + current.direction * current.speed, 0, 100 - current.width);
-        if (current.left <= 0 || current.left >= 100 - current.width) {
-          current.direction *= -1;
+        if (!current.dropping) {
+          current.left = clamp(current.left + current.direction * current.speed, 0, runtime.fieldWidth - current.size);
+          if (current.left <= 0 || current.left >= runtime.fieldWidth - current.size) {
+            current.direction *= -1;
+          }
+        } else {
+          current.top += current.velocityY;
+          current.velocityY += 0.62;
+          const landingTop = getCurrentLandingTop(runtime);
+          if (current.top >= landingTop) {
+            current.top = landingTop;
+            settleCurrentBox();
+            return;
+          }
         }
         renderStackStage();
-      }, 40);
+      }, 16);
 
       updateMinigameHud(0, game.durationSeconds * 1000, game.fullScore);
       renderStackStage();
+
+      function initializeStackField() {
+        const runtime = state.working.runtimeData;
+        if (!runtime) {
+          return;
+        }
+        runtime.fieldWidth = Math.max(280, stage.clientWidth || 640);
+        const baseLeft = (runtime.fieldWidth - runtime.boxSize) / 2;
+        const baseTop = runtime.fieldHeight - runtime.groundHeight - runtime.boxSize;
+        runtime.blocks = [{ left: baseLeft, top: baseTop, size: runtime.boxSize }];
+        runtime.current.left = 0;
+        runtime.current.top = 18;
+        runtime.current.size = runtime.boxSize;
+        runtime.current.direction = 1;
+        runtime.current.speed = 3.4;
+        runtime.current.dropping = false;
+        runtime.current.velocityY = 0;
+      }
+
+      function getCurrentLandingTop(runtime) {
+        const topBlock = runtime.blocks[runtime.blocks.length - 1];
+        return topBlock.top - runtime.current.size;
+      }
+
+      function settleCurrentBox() {
+        const runtime = state.working.runtimeData;
+        if (!runtime) {
+          return;
+        }
+
+        const topBlock = runtime.blocks[runtime.blocks.length - 1];
+        const current = runtime.current;
+        const overlap =
+          Math.min(current.left + current.size, topBlock.left + topBlock.size) - Math.max(current.left, topBlock.left);
+        const requiredOverlap = current.size * 0.55;
+        if (overlap < requiredOverlap) {
+          renderStackStage();
+          finishMinigame({ score: runtime.score, fullScore: game.fullScore });
+          return;
+        }
+
+        const centerDelta = Math.abs(
+          current.left + current.size / 2 - (topBlock.left + topBlock.size / 2),
+        );
+        const perfect = centerDelta <= 4;
+        runtime.score = round2(runtime.score + 1 + (perfect ? 0.5 : 0));
+        runtime.blocks.push({
+          left: current.left,
+          top: getCurrentLandingTop(runtime),
+          size: current.size,
+        });
+
+        if (runtime.score >= game.fullScore || runtime.blocks[runtime.blocks.length - 1].top <= 18) {
+          renderStackStage();
+          finishMinigame({ score: game.fullScore, fullScore: game.fullScore });
+          return;
+        }
+
+        runtime.current = {
+          left: Math.random() > 0.5 ? 0 : runtime.fieldWidth - current.size,
+          top: 18,
+          size: current.size,
+          direction: Math.random() > 0.5 ? 1 : -1,
+          speed: Math.min(6.3, current.speed + 0.3),
+          dropping: false,
+          velocityY: 0,
+        };
+        updateMinigameHud(runtime.score, runtime.timeLeftMs, game.fullScore);
+        renderStackStage();
+      }
 
       function renderStackStage() {
         const runtime = state.working.runtimeData;
         if (!runtime) {
           return;
         }
-
-        const currentBottom = runtime.blocks.length * 16;
         stage.innerHTML = `
           <div class="stack-field">
             ${runtime.blocks
               .map(
-                (block, index) => `
+                (block) => `
                   <div
                     class="stack-block settled"
-                    style="left: ${block.left}%; width: ${block.width}%; bottom: ${index * 16}px;"
+                    style="left: ${block.left}px; width: ${block.size}px; height: ${block.size}px; top: ${block.top}px;"
                   ></div>
                 `,
               )
               .join("")}
             <div
               class="stack-block moving"
-              style="left: ${runtime.current.left}%; width: ${runtime.current.width}%; bottom: ${currentBottom}px;"
+              style="left: ${runtime.current.left}px; width: ${runtime.current.size}px; height: ${runtime.current.size}px; top: ${runtime.current.top}px;"
             ></div>
           </div>
         `;

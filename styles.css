@@ -577,6 +577,7 @@ h2 {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 12px 24px rgba(44, 31, 24, 0.18);
+  touch-action: manipulation;
 }
 
 .balloon::after {
@@ -598,6 +599,10 @@ h2 {
 
 .balloon.bomb {
   background: linear-gradient(180deg, #495268, #22293c);
+}
+
+.balloon span {
+  pointer-events: none;
 }
 
 .memory-stage {
@@ -656,19 +661,26 @@ h2 {
 
 .stack-block {
   position: absolute;
-  height: 14px;
-  border-radius: 999px;
+  border-radius: 12px;
   transform: translateX(0);
 }
 
 .stack-block.settled {
-  background: linear-gradient(90deg, #c46948, #a64135);
-  box-shadow: 0 8px 18px rgba(166, 65, 53, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 35%),
+    linear-gradient(180deg, #c88a55, #8f552e);
+  box-shadow:
+    inset 0 0 0 2px rgba(107, 58, 26, 0.24),
+    0 12px 20px rgba(143, 85, 46, 0.22);
 }
 
 .stack-block.moving {
-  background: linear-gradient(90deg, #4d66b0, #2f467a);
-  box-shadow: 0 10px 22px rgba(47, 70, 122, 0.26);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 35%),
+    linear-gradient(180deg, #d59a61, #996034);
+  box-shadow:
+    inset 0 0 0 2px rgba(107, 58, 26, 0.2),
+    0 14px 22px rgba(125, 78, 42, 0.24);
 }
 
 @media (max-width: 860px) {
