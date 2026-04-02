@@ -1953,8 +1953,8 @@ function startMemoryMinigame() {
 function startStackMinigame() {
   const game = MINIGAMES.stack;
   const groundHeight = 28;
-  const fieldHeight = 320;
-  const boxSize = 56;
+  const fieldHeight = 400;
+  const boxSize = 28;
   state.working.runtimeData = {
     score: 0,
     timeLeftMs: game.durationSeconds * 1000,
@@ -1965,7 +1965,7 @@ function startStackMinigame() {
     blocks: [],
     current: {
       left: 0,
-      top: 12,
+      top: 24,
       size: boxSize,
       direction: 1,
       speed: 3.4,
@@ -2055,7 +2055,7 @@ function startStackMinigame() {
         const baseTop = runtime.fieldHeight - runtime.groundHeight - runtime.boxSize;
         runtime.blocks = [{ left: baseLeft, top: baseTop, size: runtime.boxSize }];
         runtime.current.left = 0;
-        runtime.current.top = 18;
+        runtime.current.top = 24;
         runtime.current.size = runtime.boxSize;
         runtime.current.direction = 1;
         runtime.current.speed = 3.4;
@@ -2088,7 +2088,10 @@ function startStackMinigame() {
         const centerDelta = Math.abs(
           current.left + current.size / 2 - (topBlock.left + topBlock.size / 2),
         );
-        const perfect = centerDelta <= 4;
+        const perfect = centerDelta <= 6;
+        if (perfect) {
+          current.left = topBlock.left;
+        }
         runtime.score = round2(runtime.score + 1 + (perfect ? 0.5 : 0));
         runtime.blocks.push({
           left: current.left,
@@ -2096,7 +2099,7 @@ function startStackMinigame() {
           size: current.size,
         });
 
-        if (runtime.score >= game.fullScore || runtime.blocks[runtime.blocks.length - 1].top <= 18) {
+        if (runtime.score >= game.fullScore) {
           renderStackStage();
           finishMinigame({ score: game.fullScore, fullScore: game.fullScore });
           return;
@@ -2104,7 +2107,7 @@ function startStackMinigame() {
 
         runtime.current = {
           left: Math.random() > 0.5 ? 0 : runtime.fieldWidth - current.size,
-          top: 18,
+          top: 24,
           size: current.size,
           direction: Math.random() > 0.5 ? 1 : -1,
           speed: Math.min(6.3, current.speed + 0.3),
