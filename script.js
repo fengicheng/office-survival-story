@@ -17,6 +17,10 @@ const WORK_EVENT_RARITY_PROFILES = [
   { 普通: 45, 少见: 30, 稀有: 18, 极稀有: 7 },
   { 普通: 35, 少见: 32, 稀有: 23, 极稀有: 10 },
 ];
+const WORK_TARGET_START = 60;
+const WORK_HAND_SIZE = 5;
+const WORK_PLAYS_PER_DAY = 4;
+const WORK_REROLL_COSTS = [50, 100, 200];
 const MINIGAMES = {
   mole: {
     id: "mole",
@@ -395,6 +399,7 @@ function createInitialState() {
     bedType: "wood",
     jobType: "normal",
     sleepBuff: 1,
+    workTargetScore: WORK_TARGET_START,
     inventory: {
       energyDrink: 0,
       stressCube: 0,
@@ -415,14 +420,19 @@ function createInitialState() {
     working: {
       busy: false,
       phase: "idle",
-      currentMinigameId: null,
-      lastMinigameId: null,
       score: 0,
-      fullScore: 0,
-      incomeMultiplier: 1,
+      targetScore: WORK_TARGET_START,
+      playsUsed: 0,
+      rerollsUsed: 0,
+      selectedCardIds: [],
+      hand: [],
+      deck: [],
+      lastPlayedLabel: "",
+      lastPlayedScore: 0,
+      resultLabel: "",
+      nextTargetScore: WORK_TARGET_START,
+      incomeDelta: 0,
       finalIncome: 0,
-      minigameStartedAt: 0,
-      runtimeData: null,
     },
     log: [],
   };
@@ -449,6 +459,7 @@ function withDefaults(candidate) {
   return {
     ...initial,
     ...candidate,
+    workTargetScore: round2(candidate.workTargetScore ?? initial.workTargetScore),
     inventory: {
       ...initial.inventory,
       ...(candidate.inventory ?? {}),
@@ -462,14 +473,19 @@ function withDefaults(candidate) {
       ...(candidate.working ?? {}),
       busy: false,
       phase: "idle",
-      currentMinigameId: null,
       score: 0,
-      fullScore: 0,
-      incomeMultiplier: 1,
+      targetScore: round2(candidate.workTargetScore ?? initial.workTargetScore),
+      playsUsed: 0,
+      rerollsUsed: 0,
+      selectedCardIds: [],
+      hand: [],
+      deck: [],
+      lastPlayedLabel: "",
+      lastPlayedScore: 0,
+      resultLabel: "",
+      nextTargetScore: round2(candidate.workTargetScore ?? initial.workTargetScore),
+      incomeDelta: 0,
       finalIncome: 0,
-      minigameStartedAt: 0,
-      runtimeData: null,
-      lastMinigameId: candidate.working?.lastMinigameId ?? null,
     },
     log: Array.isArray(candidate.log) ? candidate.log.slice(0, 18) : initial.log,
     morning: {
@@ -566,15 +582,26 @@ function getSceneCopy() {
   }
 
   if (state.stage === "working") {
-    if (state.working.phase === "intro" || state.working.phase === "playing" || state.working.phase === "result") {
-      const game = MINIGAMES[state.working.currentMinigameId] ?? { name: "小游戏" };
+    if (state.working.phase === "playing") {
+      const remaining = Math.max(0, state.working.targetScore - state.working.score);
       return {
-        title: `${game.name} 进行中`,
-        tag: "Working Game",
+        title: "今日搬砖牌局",
+        tag: "Working Cards",
         visual: "working",
-        description: `今天的工作先被压缩成了一局【${game.name}】。结果会影响今日工资，打完才能继续结算。`,
-        tip: "小游戏进行中时无法打开商店，也不能直接跳过结算。",
-        visualCopy: "班没少上，只是先换了种更直接的折磨方式。",
+        description: `今天要在 4 次出牌内冲到 ${formatScore(state.working.targetScore)} 分。当前得分 ${formatScore(state.working.score)}，还差 ${formatScore(remaining)} 分。`,
+        tip: "第 4 次出牌结束后会自动结算。换牌需要直接花钱购买。",
+        visualCopy: "今天的活，被压缩成了四手牌。",
+      };
+    }
+
+    if (state.working.phase === "result") {
+      return {
+        title: "今日工作结算",
+        tag: "Work Result",
+        visual: "working",
+        description: `本日牌局已经结束，结果为【${state.working.resultLabel}】。查看结算后会进入夜晚阶段。`,
+        tip: "达标才会提高明日目标分数，未达标则维持不变。",
+        visualCopy: "班已经上完了，接下来轮到工资给你脸色看。",
       };
     }
 
@@ -593,8 +620,8 @@ function getSceneCopy() {
       title: "准备上班",
       tag: "Working",
       visual: "working",
-      description: "点击开始工作后，会随机进入 1 个小游戏，结果将影响今日工资。",
-      tip: "工作阶段无法打开商店。小游戏结束后才会进入正式结算。",
+      description: `点击开始工作后，会进入 4 次出牌的卡牌工作局。今日目标分数为 ${formatScore(state.workTargetScore)}。`,
+      tip: "工作阶段无法打开商店。第 4 次出牌后会自动结算工资。",
       visualCopy: "你看起来很忙，事实上也确实很忙。",
     };
   }
@@ -650,16 +677,29 @@ function renderActions() {
       actions.push({ label: "商店", style: "secondary", onClick: openStoreModal });
     }
   } else if (state.stage === "working") {
-    actions.push({
-      label:
-        state.working.phase === "settling"
-          ? "正在搬砖..."
-          : state.working.phase === "idle"
-            ? "开始今天的工作"
-            : "小游戏进行中...",
-      onClick: resolveWorkDay,
-      disabled: state.working.busy || state.working.phase !== "idle",
-    });
+    if (state.working.phase === "idle") {
+      actions.push({
+        label: "开始今天的工作",
+        onClick: resolveWorkDay,
+        disabled: state.working.busy,
+      });
+    } else if (state.working.phase === "playing") {
+      actions.push({
+        label: "继续工作牌局",
+        onClick: openWorkCardGameModal,
+      });
+    } else if (state.working.phase === "result") {
+      actions.push({
+        label: "查看工作结算",
+        onClick: showWorkCardResult,
+      });
+    } else {
+      actions.push({
+        label: "正在搬砖...",
+        onClick: () => {},
+        disabled: true,
+      });
+    }
   } else if (state.stage === "night") {
     actions.push({ label: "睡觉", onClick: openSleepModal });
     actions.push({ label: "熬夜 1 小时", style: "warning", onClick: stayUpOneHour });
@@ -767,198 +807,355 @@ function resolveWorkDay() {
   }
 
   state.working.busy = true;
-  addLog(state, "今天的班开始了。");
-  const minigameId = pickDailyMinigame(state.working.lastMinigameId);
-  const game = MINIGAMES[minigameId];
-  state.working.phase = "intro";
-  state.working.currentMinigameId = minigameId;
-  state.working.lastMinigameId = minigameId;
+  state.working.phase = "playing";
+  state.working.targetScore = round2(state.workTargetScore);
   state.working.score = 0;
-  state.working.fullScore = game.fullScore;
-  state.working.incomeMultiplier = 1;
+  state.working.playsUsed = 0;
+  state.working.rerollsUsed = 0;
+  state.working.selectedCardIds = [];
+  state.working.deck = createShuffledWorkDeck();
+  state.working.hand = drawWorkCards([], WORK_HAND_SIZE);
+  state.working.lastPlayedLabel = "";
+  state.working.lastPlayedScore = 0;
+  state.working.resultLabel = "";
+  state.working.nextTargetScore = round2(state.workTargetScore);
+  state.working.incomeDelta = 0;
   state.working.finalIncome = JOBS[state.jobType].moneyDelta;
-  state.working.minigameStartedAt = 0;
-  state.working.runtimeData = null;
-  addLog(state, `今天的任务是小游戏【${game.name}】。`);
+  addLog(state, "今天的班开始了。");
   render();
-  openMinigameIntro(minigameId);
+  openWorkCardGameModal();
 }
 
-function pickDailyMinigame(lastMinigameId) {
-  const first = randomPick(MINIGAME_IDS);
-  if (first !== lastMinigameId) {
-    return first;
+function createShuffledWorkDeck() {
+  const deck = [];
+  for (let value = 1; value <= 10; value += 1) {
+    for (let copy = 0; copy < 3; copy += 1) {
+      deck.push({
+        id: `work-${state.day}-${value}-${copy}-${Math.random().toString(36).slice(2, 8)}`,
+        value,
+      });
+    }
   }
-  return randomPick(MINIGAME_IDS);
+
+  for (let index = deck.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
+  }
+  return deck;
 }
 
-function randomPick(items) {
-  return items[Math.floor(Math.random() * items.length)];
+function drawWorkCards(baseHand, count) {
+  const hand = [...baseHand];
+  while (hand.length < count && state.working.deck.length > 0) {
+    hand.push(state.working.deck.pop());
+  }
+  return sortWorkHand(hand);
 }
 
-function openMinigameIntro(minigameId) {
-  const game = MINIGAMES[minigameId];
-  if (!game) {
-    resolveBaseWorkSettlement(JOBS[state.jobType].moneyDelta);
+function sortWorkHand(hand) {
+  return [...hand].sort((left, right) => left.value - right.value || left.id.localeCompare(right.id));
+}
+
+function getSelectedWorkCards() {
+  const selected = new Set(state.working.selectedCardIds);
+  return state.working.hand.filter((card) => selected.has(card.id));
+}
+
+function getWorkRerollCost() {
+  return WORK_REROLL_COSTS[state.working.rerollsUsed] ?? null;
+}
+
+function evaluateWorkCards(cards) {
+  if (cards.length < 1 || cards.length > 3) {
+    return null;
+  }
+
+  const values = cards
+    .map((card) => card.value)
+    .sort((left, right) => left - right);
+  const sum = values.reduce((total, value) => total + value, 0);
+
+  if (cards.length === 1) {
+    return {
+      label: "单张",
+      score: Math.floor(sum),
+    };
+  }
+
+  if (cards.length === 2 && values[0] === values[1]) {
+    return {
+      label: "对子",
+      score: Math.floor(sum * 1.5),
+    };
+  }
+
+  if (cards.length === 3) {
+    if (values[0] === values[1] && values[1] === values[2]) {
+      return {
+        label: "三条",
+        score: Math.floor(sum * 3),
+      };
+    }
+
+    if (values[0] + 1 === values[1] && values[1] + 1 === values[2]) {
+      return {
+        label: "顺子",
+        score: Math.floor(sum * 2.5),
+      };
+    }
+  }
+
+  return null;
+}
+
+function toggleWorkCardSelection(cardId) {
+  if (state.stage !== "working" || state.working.phase !== "playing") {
     return;
   }
 
+  const nextSelected = new Set(state.working.selectedCardIds);
+  if (nextSelected.has(cardId)) {
+    nextSelected.delete(cardId);
+  } else {
+    nextSelected.add(cardId);
+  }
+
+  state.working.selectedCardIds = [...nextSelected];
+  openWorkCardGameModal();
+}
+
+function clearWorkCardSelection() {
+  if (state.stage !== "working" || state.working.phase !== "playing") {
+    return;
+  }
+  state.working.selectedCardIds = [];
+  openWorkCardGameModal();
+}
+
+function removeSelectedCardsFromHand() {
+  const selected = new Set(state.working.selectedCardIds);
+  state.working.hand = state.working.hand.filter((card) => !selected.has(card.id));
+}
+
+function playWorkCardHand() {
+  if (state.stage !== "working" || state.working.phase !== "playing") {
+    return;
+  }
+
+  const selectedCards = getSelectedWorkCards();
+  const result = evaluateWorkCards(selectedCards);
+  if (!result) {
+    return;
+  }
+
+  removeSelectedCardsFromHand();
+  state.working.hand = drawWorkCards(state.working.hand, WORK_HAND_SIZE);
+  state.working.selectedCardIds = [];
+  state.working.playsUsed += 1;
+  state.working.score += result.score;
+  state.working.lastPlayedLabel = result.label;
+  state.working.lastPlayedScore = result.score;
+  addLog(
+    state,
+    `第 ${state.working.playsUsed} 手打出【${result.label}】，获得 ${result.score} 分。`,
+  );
+
+  if (state.working.playsUsed >= WORK_PLAYS_PER_DAY) {
+    finishWorkCardGame();
+    return;
+  }
+
+  render();
+  openWorkCardGameModal();
+}
+
+function rerollWorkCards() {
+  if (state.stage !== "working" || state.working.phase !== "playing") {
+    return;
+  }
+
+  const selectedCards = getSelectedWorkCards();
+  const cost = getWorkRerollCost();
+  if (!selectedCards.length || cost === null || state.money < cost) {
+    return;
+  }
+
+  state.money -= cost;
+  removeSelectedCardsFromHand();
+  state.working.hand = drawWorkCards(state.working.hand, WORK_HAND_SIZE);
+  state.working.selectedCardIds = [];
+  state.working.rerollsUsed += 1;
+  addLog(state, `花了 ${cost} 资金换掉 ${selectedCards.length} 张牌。`);
+  render();
+  openWorkCardGameModal();
+}
+
+function openWorkCardGameModal() {
+  if (state.stage !== "working" || state.working.phase !== "playing") {
+    return;
+  }
+
+  const selectedCards = getSelectedWorkCards();
+  const preview = evaluateWorkCards(selectedCards);
+  const rerollCost = getWorkRerollCost();
+  const cardsLeft = state.working.deck.length;
+  const canReroll = selectedCards.length > 0 && rerollCost !== null && state.money >= rerollCost;
+  const selectionText = selectedCards.length === 0
+    ? "选择 1-3 张牌出牌，或选中任意张牌花钱换牌。"
+    : preview
+      ? `当前组合：${preview.label}，本次出牌可得 ${preview.score} 分。`
+      : "当前选择无法组成合法牌型，可以改为换牌。";
+
+  const handHtml = state.working.hand
+    .map((card) => {
+      const active = state.working.selectedCardIds.includes(card.id) ? "active" : "";
+      return `
+        <button class="work-card ${active}" data-card-id="${card.id}" type="button">
+          <span class="work-card-face">${card.value}</span>
+        </button>
+      `;
+    })
+    .join("");
+
   openModal(
     `
-      <div class="modal-card minigame-card">
-        <p class="eyebrow">Today's Work</p>
-        <h3>${game.name}</h3>
-        <p>${game.intro}</p>
-        <div class="modal-grid">
+      <div class="modal-card minigame-card workgame-card">
+        <div class="minigame-top">
+          <div>
+            <p class="eyebrow">Today's Work</p>
+            <h3>今日搬砖牌局</h3>
+            <p>4 次出牌全部打完后，会自动结算今天的工作收入。</p>
+          </div>
+          <span class="scene-tag minigame-tag">工作中</span>
+        </div>
+        <div class="minigame-stats workgame-stats">
           <div class="modal-section">
-            <strong>时长</strong>
-            <p>${game.durationSeconds} 秒</p>
+            <strong>目标分数</strong>
+            <p>${formatScore(state.working.targetScore)}</p>
           </div>
           <div class="modal-section">
-            <strong>满分</strong>
-            <p>${formatScore(game.fullScore)}</p>
+            <strong>当前得分</strong>
+            <p>${formatScore(state.working.score)}</p>
           </div>
           <div class="modal-section">
-            <strong>规则</strong>
-            <p>${game.rule}</p>
+            <strong>当前资金</strong>
+            <p>${Math.round(state.money)}</p>
           </div>
           <div class="modal-section">
-            <strong>工资结算</strong>
-            <p>满分 x1.3；低于 70% x0.8；其余 x1.0。</p>
+            <strong>固定工作收益</strong>
+            <p>${JOBS[state.jobType].moneyDelta}</p>
+          </div>
+          <div class="modal-section">
+            <strong>还差多少分</strong>
+            <p>${formatScore(Math.max(0, state.working.targetScore - state.working.score))}</p>
+          </div>
+          <div class="modal-section">
+            <strong>出牌进度</strong>
+            <p>${state.working.playsUsed} / ${WORK_PLAYS_PER_DAY}</p>
+          </div>
+          <div class="modal-section">
+            <strong>下次换牌价格</strong>
+            <p>${rerollCost ?? "已用完"}</p>
+          </div>
+          <div class="modal-section">
+            <strong>牌堆余量</strong>
+            <p>${cardsLeft}</p>
           </div>
         </div>
-        <div class="modal-actions">
-          <button id="start-minigame" class="modal-btn">开始</button>
+        <div class="minigame-stage workgame-stage">
+          <div class="workgame-callout">
+            <strong>${selectionText}</strong>
+            <p>${state.working.lastPlayedLabel ? `上一手：${state.working.lastPlayedLabel} +${state.working.lastPlayedScore}` : "还没出牌。"}${state.working.score >= state.working.targetScore ? " 当前已达标。" : ""}</p>
+          </div>
+          <div class="workgame-hand">${handHtml}</div>
+        </div>
+        <div class="modal-actions minigame-controls">
+          <button id="play-work-hand" class="modal-btn" ${preview ? "" : "disabled"}>出牌</button>
+          <button id="reroll-work-hand" class="modal-btn secondary" ${canReroll ? "" : "disabled"}>${rerollCost === null ? "换牌次数已满" : `换牌 -${rerollCost}`}</button>
+          <button id="clear-work-selection" class="modal-btn secondary" ${selectedCards.length ? "" : "disabled"}>清空选择</button>
         </div>
       </div>
     `,
     () => {
-      document.querySelector("#start-minigame")?.addEventListener("click", () => startMinigame(minigameId));
+      document.querySelectorAll("[data-card-id]").forEach((button) => {
+        button.addEventListener("click", () => toggleWorkCardSelection(button.getAttribute("data-card-id")));
+      });
+      document.querySelector("#play-work-hand")?.addEventListener("click", playWorkCardHand);
+      document.querySelector("#reroll-work-hand")?.addEventListener("click", rerollWorkCards);
+      document.querySelector("#clear-work-selection")?.addEventListener("click", clearWorkCardSelection);
     },
   );
 }
 
-function startMinigame(minigameId) {
-  const game = MINIGAMES[minigameId];
-  if (!game) {
+function finishWorkCardGame() {
+  if (state.stage !== "working" || state.working.phase !== "playing") {
     return;
   }
 
-  state.working.phase = "playing";
-  state.working.minigameStartedAt = Date.now();
-  state.working.score = 0;
-  state.working.fullScore = game.fullScore;
-  clearMinigameSchedulers();
-  render();
-  MINIGAME_RUNNERS[minigameId]?.();
-}
-
-function buildMinigameShell(game, extraClass = "", controlsHtml = "") {
-  return `
-    <div class="modal-card minigame-card">
-      <div class="minigame-top">
-        <div>
-          <p class="eyebrow">Today's Work</p>
-          <h3>${game.name}</h3>
-          <p>${game.helper}</p>
-        </div>
-        <span class="scene-tag minigame-tag">小游戏</span>
-      </div>
-      <div class="minigame-stats">
-        <div class="modal-section">
-          <strong>倒计时</strong>
-          <p id="minigame-timer">${game.durationSeconds.toFixed(1)} 秒</p>
-        </div>
-        <div class="modal-section">
-          <strong>当前分数</strong>
-          <p><span id="minigame-score">0</span> / <span id="minigame-full-score">${formatScore(game.fullScore)}</span></p>
-        </div>
-      </div>
-      <div id="minigame-stage" class="minigame-stage ${extraClass}"></div>
-      ${controlsHtml ? `<div class="modal-actions minigame-controls">${controlsHtml}</div>` : ""}
-    </div>
-  `;
-}
-
-function updateMinigameHud(score, timeLeftMs, fullScore) {
-  const scoreNode = document.querySelector("#minigame-score");
-  const timerNode = document.querySelector("#minigame-timer");
-  const fullScoreNode = document.querySelector("#minigame-full-score");
-  if (scoreNode) {
-    scoreNode.textContent = formatScore(score);
-  }
-  if (timerNode) {
-    timerNode.textContent = `${Math.max(0, timeLeftMs) / 1000 >= 10 ? "" : ""}${(Math.max(0, timeLeftMs) / 1000).toFixed(1)} 秒`;
-  }
-  if (fullScoreNode) {
-    fullScoreNode.textContent = formatScore(fullScore);
-  }
-}
-
-function finishMinigame({ score, fullScore }) {
-  if (state.working.phase !== "playing") {
-    return;
-  }
-
-  clearMinigameSchedulers();
-  const cappedFullScore = Math.max(1, round2(fullScore ?? state.working.fullScore ?? 1));
-  const normalizedScore = clamp(round2(score ?? 0), 0, cappedFullScore);
-  const ratio = normalizedScore / cappedFullScore;
-  const incomeMultiplier = getIncomeMultiplier(normalizedScore, cappedFullScore);
-  const finalIncome = Math.round(JOBS[state.jobType].moneyDelta * incomeMultiplier);
+  const job = JOBS[state.jobType];
+  const targetScore = state.working.targetScore;
+  const dayScore = state.working.score;
+  const reachedTarget = dayScore >= targetScore;
+  const extraIncome = reachedTarget ? Math.floor((dayScore - targetScore) * 0.5) : 0;
+  const finalIncome = reachedTarget ? job.moneyDelta + extraIncome : Math.floor(job.moneyDelta * 0.8);
+  const nextTargetScore = reachedTarget ? Math.round(targetScore * 1.1) : targetScore;
+  const resultLabel = reachedTarget ? (dayScore > targetScore ? "超额达标" : "达标") : "未达标";
 
   state.working.phase = "result";
-  state.working.score = normalizedScore;
-  state.working.fullScore = cappedFullScore;
-  state.working.incomeMultiplier = incomeMultiplier;
+  state.working.selectedCardIds = [];
   state.working.finalIncome = finalIncome;
-  state.working.runtimeData = null;
+  state.working.incomeDelta = finalIncome - job.moneyDelta;
+  state.working.nextTargetScore = nextTargetScore;
+  state.working.resultLabel = resultLabel;
 
   addLog(
     state,
-    `小游戏结算：${formatScore(normalizedScore)}/${formatScore(cappedFullScore)}，达成率 ${Math.round(clamp(ratio, 0, 1) * 100)}%，工资倍率 x${incomeMultiplier.toFixed(1)}。`,
+    `今日工作${resultLabel}，得分 ${formatScore(dayScore)}/${formatScore(targetScore)}，今日收入 ${finalIncome}。`,
   );
-  if (incomeMultiplier === 1.3) {
-    addLog(state, "发挥出色，今日工资提升到 130%。");
-  } else if (incomeMultiplier === 0.8) {
-    addLog(state, "发挥失常，今日工资降为 80%。");
-  }
 
   render();
-  showMinigameResult();
+  showWorkCardResult();
 }
 
-function showMinigameResult() {
-  const game = MINIGAMES[state.working.currentMinigameId];
+function showWorkCardResult() {
+  if (state.stage !== "working" || state.working.phase !== "result") {
+    return;
+  }
+
   const job = JOBS[state.jobType];
-  const ratio = state.working.fullScore <= 0 ? 0 : state.working.score / state.working.fullScore;
+  const reachedTarget = state.working.score >= state.working.targetScore;
+  const detailLabel = reachedTarget ? "额外收益" : "未达标结算";
   openModal(
     `
-      <div class="modal-card minigame-card">
+      <div class="modal-card minigame-card workgame-card">
         <p class="eyebrow">Work Result</p>
-        <h3>${game?.name ?? "小游戏"} 结算</h3>
+        <h3>${state.working.resultLabel}</h3>
         <div class="modal-grid">
           <div class="modal-section">
-            <strong>成绩</strong>
-            <p>${formatScore(state.working.score)} / ${formatScore(state.working.fullScore)}</p>
+            <strong>今日目标分数</strong>
+            <p>${formatScore(state.working.targetScore)}</p>
           </div>
           <div class="modal-section">
-            <strong>达成率</strong>
-            <p>${Math.round(clamp(ratio, 0, 1) * 100)}%</p>
+            <strong>今日实际得分</strong>
+            <p>${formatScore(state.working.score)}</p>
           </div>
           <div class="modal-section">
             <strong>基础工资</strong>
             <p>${job.moneyDelta}</p>
           </div>
           <div class="modal-section">
-            <strong>最终工资</strong>
-            <p>${state.working.finalIncome}（x${state.working.incomeMultiplier.toFixed(1)}）</p>
+            <strong>${detailLabel}</strong>
+            <p>${formatSigned(state.working.incomeDelta)}</p>
           </div>
         </div>
         <div class="modal-grid">
           <div class="modal-section">
-            <strong>今日工作消耗</strong>
-            <p>精力 ${formatSigned(job.energyDelta)}，压力 ${formatSigned(job.stressDelta)}。</p>
+            <strong>今日最终收入</strong>
+            <p>${state.working.finalIncome}</p>
+          </div>
+          <div class="modal-section">
+            <strong>明日目标分数</strong>
+            <p>${formatScore(state.working.nextTargetScore)}</p>
           </div>
         </div>
         <div class="modal-actions">
@@ -969,20 +1166,9 @@ function showMinigameResult() {
     () => {
       document
         .querySelector("#continue-work-settlement")
-        ?.addEventListener("click", () => resolveBaseWorkSettlement(state.working.finalIncome));
+        ?.addEventListener("click", () => resolveBaseWorkSettlement(state.working.finalIncome, state.working.nextTargetScore));
     },
   );
-}
-
-function getIncomeMultiplier(score, fullScore) {
-  const ratio = fullScore <= 0 ? 0 : score / fullScore;
-  if (ratio >= 1) {
-    return 1.3;
-  }
-  if (ratio < 0.7) {
-    return 0.8;
-  }
-  return 1;
 }
 
 function clearMinigameSchedulers() {
@@ -1082,7 +1268,10 @@ function chooseWorkEventOption(optionIndex) {
   openCurrentWorkEvent();
 }
 
-function resolveBaseWorkSettlement(incomeOverride = JOBS[state.jobType].moneyDelta) {
+function resolveBaseWorkSettlement(
+  incomeOverride = JOBS[state.jobType].moneyDelta,
+  nextTargetScore = state.workTargetScore,
+) {
   closeModal();
   clearMinigameSchedulers();
   state.working.phase = "settling";
@@ -1095,6 +1284,7 @@ function resolveBaseWorkSettlement(incomeOverride = JOBS[state.jobType].moneyDel
       stress: job.stressDelta,
       money: incomeOverride,
     });
+    state.workTargetScore = round2(nextTargetScore);
     state.currentTime = NIGHT_START;
     state.stage = "night";
     resetWorkingState();
@@ -1113,17 +1303,21 @@ function resolveBaseWorkSettlement(incomeOverride = JOBS[state.jobType].moneyDel
 
 function resetWorkingState() {
   clearMinigameSchedulers();
-  const lastMinigameId = state.working.lastMinigameId ?? null;
   state.working.busy = false;
   state.working.phase = "idle";
-  state.working.currentMinigameId = null;
-  state.working.lastMinigameId = lastMinigameId;
   state.working.score = 0;
-  state.working.fullScore = 0;
-  state.working.incomeMultiplier = 1;
+  state.working.targetScore = round2(state.workTargetScore);
+  state.working.playsUsed = 0;
+  state.working.rerollsUsed = 0;
+  state.working.selectedCardIds = [];
+  state.working.hand = [];
+  state.working.deck = [];
+  state.working.lastPlayedLabel = "";
+  state.working.lastPlayedScore = 0;
+  state.working.resultLabel = "";
+  state.working.nextTargetScore = round2(state.workTargetScore);
+  state.working.incomeDelta = 0;
   state.working.finalIncome = 0;
-  state.working.minigameStartedAt = 0;
-  state.working.runtimeData = null;
 }
 
 function startDozing() {
