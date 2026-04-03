@@ -21,6 +21,201 @@ const WORK_TARGET_START = 60;
 const WORK_HAND_SIZE = 5;
 const WORK_PLAYS_PER_DAY = 4;
 const WORK_REROLL_COSTS = [50, 100, 200];
+const BASE_WORK_REROLL_LIMIT = 3;
+const SKILLS = {
+  pairTraining: {
+    id: "pairTraining",
+    name: "对子培训",
+    price: 1200,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "对子额外 +5",
+    summary: "稳定保底",
+  },
+  burnoutExpertise: {
+    id: "burnoutExpertise",
+    name: "爆肝专精",
+    price: 2000,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "三条最终分数 x1.3",
+    summary: "高爆发路线",
+  },
+  processMastery: {
+    id: "processMastery",
+    name: "流程熟练",
+    price: 1600,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "顺子倍率提升为 x3",
+    summary: "凑牌路线",
+  },
+  soloOperator: {
+    id: "soloOperator",
+    name: "单兵作战",
+    price: 1400,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "单张最终分数 x2，对子最终分数 x0.8",
+    summary: "快速保底流",
+  },
+  basicTraining: {
+    id: "basicTraining",
+    name: "基础培训",
+    price: 1800,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "所有牌型最终分数 x1.05",
+    summary: "泛用成长",
+  },
+  performanceSprint: {
+    id: "performanceSprint",
+    name: "绩效冲刺",
+    price: 2200,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "每天第 4 次出牌最终分数 x1.5",
+    summary: "收尾爆发",
+  },
+  quickReshuffle: {
+    id: "quickReshuffle",
+    name: "快速重组",
+    price: 1000,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "每天第一次换牌免费",
+    summary: "降低经济压力",
+  },
+  rerollMastery: {
+    id: "rerollMastery",
+    name: "熟练摸牌",
+    price: 1800,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "每天最大换牌次数 +1",
+    summary: "提高成型率",
+  },
+  carefulSelection: {
+    id: "carefulSelection",
+    name: "精挑细选",
+    price: 1600,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "换牌时若本次弃掉 3 张及以上，则下一次出牌最终分数额外 +8",
+    summary: "鼓励大换牌",
+  },
+  safetyPlan: {
+    id: "safetyPlan",
+    name: "保底方案",
+    price: 2000,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "若当天未达标，则最终得分 x1.1",
+    summary: "降低卡线风险",
+  },
+  bonusCommission: {
+    id: "bonusCommission",
+    name: "冲刺奖金",
+    price: 2400,
+    maxPurchases: 1,
+    type: "unique",
+    effect: "超额达标时，超出部分收益系数由 0.5 提升到 0.7",
+    summary: "高分回报路线",
+  },
+  practiceMakesPerfect: {
+    id: "practiceMakesPerfect",
+    name: "熟能生巧",
+    price: 1500,
+    maxPurchases: 3,
+    type: "stackable",
+    effect: "每次出牌额外 +3",
+    summary: "稳定补分",
+  },
+  pairDrill: {
+    id: "pairDrill",
+    name: "对子加练",
+    price: 1000,
+    maxPurchases: 3,
+    type: "stackable",
+    effect: "对子额外 +2",
+    summary: "强化对子流",
+  },
+  tripleDrill: {
+    id: "tripleDrill",
+    name: "三条加练",
+    price: 1400,
+    maxPurchases: 3,
+    type: "stackable",
+    effect: "三条最终分数额外 x1.1",
+    summary: "强化三条流",
+  },
+  straightDrill: {
+    id: "straightDrill",
+    name: "顺子加练",
+    price: 1200,
+    maxPurchases: 3,
+    type: "stackable",
+    effect: "顺子额外 +4",
+    summary: "强化顺子流",
+  },
+  singleTraining: {
+    id: "singleTraining",
+    name: "单张训练",
+    price: 900,
+    maxPurchases: 3,
+    type: "stackable",
+    effect: "单张额外 +2",
+    summary: "强化单张保底",
+  },
+  clutchFinish: {
+    id: "clutchFinish",
+    name: "临门一脚",
+    price: 1300,
+    maxPurchases: 2,
+    type: "stackable",
+    effect: "第 4 次出牌额外 +6",
+    summary: "强化收尾",
+  },
+  rerollDiscount: {
+    id: "rerollDiscount",
+    name: "换牌补贴",
+    price: 1000,
+    maxPurchases: 2,
+    type: "stackable",
+    effect: "每天换牌价格总额减少 20",
+    summary: "降低换牌成本",
+  },
+  handPlanning: {
+    id: "handPlanning",
+    name: "手牌规划",
+    price: 1600,
+    maxPurchases: 2,
+    type: "stackable",
+    effect: "每天最大换牌次数额外 +1",
+    summary: "提高成型率",
+  },
+};
+const STORE_SKILL_ORDER = [
+  "pairTraining",
+  "burnoutExpertise",
+  "processMastery",
+  "soloOperator",
+  "basicTraining",
+  "performanceSprint",
+  "quickReshuffle",
+  "rerollMastery",
+  "carefulSelection",
+  "safetyPlan",
+  "bonusCommission",
+  "practiceMakesPerfect",
+  "pairDrill",
+  "tripleDrill",
+  "straightDrill",
+  "singleTraining",
+  "clutchFinish",
+  "rerollDiscount",
+  "handPlanning",
+];
 
 const BEDS = {
   wood: {
@@ -230,6 +425,7 @@ let bgmTrackIndex = 0;
 let bgmEnabled = true;
 let bgmUnlockBound = false;
 let workEventCatalog = [...FALLBACK_WORK_EVENTS];
+let activeStoreTab = "goods";
 
 bindEvents();
 setupBackgroundMusic();
@@ -358,6 +554,7 @@ function createInitialState() {
     jobType: "normal",
     sleepBuff: 1,
     workTargetScore: WORK_TARGET_START,
+    skillPurchases: {},
     inventory: {
       energyDrink: 0,
       stressCube: 0,
@@ -391,6 +588,9 @@ function createInitialState() {
       nextTargetScore: WORK_TARGET_START,
       incomeDelta: 0,
       finalIncome: 0,
+      settlementScore: 0,
+      nextPlayBonus: 0,
+      rerollDiscountRemaining: 0,
     },
     log: [],
   };
@@ -418,6 +618,10 @@ function withDefaults(candidate) {
     ...initial,
     ...candidate,
     workTargetScore: round2(candidate.workTargetScore ?? initial.workTargetScore),
+    skillPurchases: {
+      ...initial.skillPurchases,
+      ...(candidate.skillPurchases ?? {}),
+    },
     inventory: {
       ...initial.inventory,
       ...(candidate.inventory ?? {}),
@@ -444,6 +648,9 @@ function withDefaults(candidate) {
       nextTargetScore: round2(candidate.workTargetScore ?? initial.workTargetScore),
       incomeDelta: 0,
       finalIncome: 0,
+      settlementScore: 0,
+      nextPlayBonus: 0,
+      rerollDiscountRemaining: 0,
     },
     log: Array.isArray(candidate.log) ? candidate.log.slice(0, 18) : initial.log,
     morning: {
@@ -452,6 +659,70 @@ function withDefaults(candidate) {
       dozing: false,
     },
   };
+}
+
+function getSkillLevel(skillId) {
+  return Number(state.skillPurchases?.[skillId] ?? 0);
+}
+
+function hasSkill(skillId) {
+  return getSkillLevel(skillId) > 0;
+}
+
+function getWorkRerollLimit() {
+  return BASE_WORK_REROLL_LIMIT + (hasSkill("rerollMastery") ? 1 : 0) + getSkillLevel("handPlanning");
+}
+
+function getBaseWorkRerollCost(rerollIndex) {
+  if (rerollIndex < WORK_REROLL_COSTS.length) {
+    return WORK_REROLL_COSTS[rerollIndex];
+  }
+  const lastKnown = WORK_REROLL_COSTS[WORK_REROLL_COSTS.length - 1];
+  return lastKnown * 2 ** (rerollIndex - WORK_REROLL_COSTS.length + 1);
+}
+
+function getWorkRerollCost() {
+  if (state.working.rerollsUsed >= getWorkRerollLimit()) {
+    return null;
+  }
+
+  let cost = getBaseWorkRerollCost(state.working.rerollsUsed);
+  if (hasSkill("quickReshuffle") && state.working.rerollsUsed === 0) {
+    cost = 0;
+  }
+
+  const discount = Math.min(cost, state.working.rerollDiscountRemaining ?? 0);
+  return Math.max(0, cost - discount);
+}
+
+function consumeWorkRerollDiscount() {
+  let cost = getBaseWorkRerollCost(state.working.rerollsUsed);
+  if (hasSkill("quickReshuffle") && state.working.rerollsUsed === 0) {
+    cost = 0;
+  }
+  const discount = Math.min(cost, state.working.rerollDiscountRemaining ?? 0);
+  state.working.rerollDiscountRemaining = Math.max(0, (state.working.rerollDiscountRemaining ?? 0) - discount);
+}
+
+function canPurchaseSkill(skillId) {
+  const skill = SKILLS[skillId];
+  if (!skill) {
+    return false;
+  }
+  return state.money >= skill.price && getSkillLevel(skill.id) < skill.maxPurchases;
+}
+
+function getOwnedSkillSummary() {
+  return STORE_SKILL_ORDER
+    .map((skillId) => {
+      const skill = SKILLS[skillId];
+      const level = getSkillLevel(skillId);
+      if (!level) {
+        return null;
+      }
+      return skill.maxPurchases > 1 ? `${skill.name} ${level}/${skill.maxPurchases}` : skill.name;
+    })
+    .filter(Boolean);
 }
 
 function saveState() {
@@ -778,6 +1049,9 @@ function resolveWorkDay() {
   state.working.nextTargetScore = round2(state.workTargetScore);
   state.working.incomeDelta = 0;
   state.working.finalIncome = JOBS[state.jobType].moneyDelta;
+  state.working.settlementScore = 0;
+  state.working.nextPlayBonus = 0;
+  state.working.rerollDiscountRemaining = 20 * getSkillLevel("rerollDiscount");
   addLog(state, "今天的班开始了。");
   render();
   openWorkCardGameModal();
@@ -818,10 +1092,6 @@ function getSelectedWorkCards() {
   return state.working.hand.filter((card) => selected.has(card.id));
 }
 
-function getWorkRerollCost() {
-  return WORK_REROLL_COSTS[state.working.rerollsUsed] ?? null;
-}
-
 function evaluateWorkCards(cards) {
   if (cards.length < 1 || cards.length > 3) {
     return null;
@@ -832,37 +1102,104 @@ function evaluateWorkCards(cards) {
     .sort((left, right) => left - right);
   const sum = values.reduce((total, value) => total + value, 0);
 
+  let label = "";
+  let baseScore = 0;
+  let flatBonus = 0;
+  let multiplier = 1;
+  const notes = [];
+
   if (cards.length === 1) {
-    return {
-      label: "单张",
-      score: Math.floor(sum),
-    };
-  }
-
-  if (cards.length === 2 && values[0] === values[1]) {
-    return {
-      label: "对子",
-      score: Math.floor(sum * 1.5),
-    };
-  }
-
-  if (cards.length === 3) {
-    if (values[0] === values[1] && values[1] === values[2]) {
-      return {
-        label: "三条",
-        score: Math.floor(sum * 3),
-      };
+    label = "单张";
+    baseScore = sum;
+    const singleTrainingBonus = getSkillLevel("singleTraining") * 2;
+    flatBonus += singleTrainingBonus;
+    if (singleTrainingBonus > 0) {
+      notes.push("单张训练");
     }
+    if (hasSkill("soloOperator")) {
+      multiplier *= 2;
+      notes.push("单兵作战");
+    }
+  } else if (cards.length === 2 && values[0] === values[1]) {
+    label = "对子";
+    baseScore = sum * 1.5;
+    const pairDrillBonus = getSkillLevel("pairDrill") * 2;
+    flatBonus += pairDrillBonus;
+    if (pairDrillBonus > 0) {
+      notes.push("对子加练");
+    }
+    if (hasSkill("pairTraining")) {
+      flatBonus += 5;
+      notes.push("对子培训");
+    }
+    if (hasSkill("soloOperator")) {
+      multiplier *= 0.8;
+      notes.push("单兵作战副作用");
+    }
+  } else if (cards.length === 3 && values[0] === values[1] && values[1] === values[2]) {
+    label = "三条";
+    baseScore = sum * 3;
+    if (hasSkill("burnoutExpertise")) {
+      multiplier *= 1.3;
+      notes.push("爆肝专精");
+    }
+    const tripleDrillLevel = getSkillLevel("tripleDrill");
+    multiplier *= 1.1 ** tripleDrillLevel;
+    if (tripleDrillLevel > 0) {
+      notes.push(`三条加练 x${(1.1 ** tripleDrillLevel).toFixed(2)}`);
+    }
+  } else if (cards.length === 3 && values[0] + 1 === values[1] && values[1] + 1 === values[2]) {
+    label = "顺子";
+    baseScore = sum * 2.5;
+    const straightDrillBonus = getSkillLevel("straightDrill") * 4;
+    flatBonus += straightDrillBonus;
+    if (straightDrillBonus > 0) {
+      notes.push("顺子加练");
+    }
+    if (hasSkill("processMastery")) {
+      multiplier *= 3 / 2.5;
+      notes.push("流程熟练");
+    }
+  } else {
+    return null;
+  }
 
-    if (values[0] + 1 === values[1] && values[1] + 1 === values[2]) {
-      return {
-        label: "顺子",
-        score: Math.floor(sum * 2.5),
-      };
+  const practiceBonus = getSkillLevel("practiceMakesPerfect") * 3;
+  flatBonus += practiceBonus;
+  if (practiceBonus > 0) {
+    notes.push("熟能生巧");
+  }
+  const currentPlayNumber = state.working.playsUsed + 1;
+  if (currentPlayNumber === WORK_PLAYS_PER_DAY) {
+    const clutchBonus = getSkillLevel("clutchFinish") * 6;
+    flatBonus += clutchBonus;
+    if (clutchBonus > 0) {
+      notes.push("临门一脚");
+    }
+    if (hasSkill("performanceSprint")) {
+      multiplier *= 1.5;
+      notes.push("绩效冲刺");
     }
   }
 
-  return null;
+  if (state.working.nextPlayBonus > 0) {
+    flatBonus += state.working.nextPlayBonus;
+    notes.push(`精挑细选 +${state.working.nextPlayBonus}`);
+  }
+
+  if (hasSkill("basicTraining")) {
+    multiplier *= 1.05;
+    notes.push("基础培训");
+  }
+
+  return {
+    label,
+    baseScore: Math.floor(baseScore),
+    score: Math.floor((baseScore + flatBonus) * multiplier),
+    flatBonus,
+    multiplier,
+    notes,
+  };
 }
 
 function toggleWorkCardSelection(cardId) {
@@ -912,9 +1249,10 @@ function playWorkCardHand() {
   state.working.score += result.score;
   state.working.lastPlayedLabel = result.label;
   state.working.lastPlayedScore = result.score;
+  state.working.nextPlayBonus = 0;
   addLog(
     state,
-    `第 ${state.working.playsUsed} 手打出【${result.label}】，获得 ${result.score} 分。`,
+    `第 ${state.working.playsUsed} 手打出【${result.label}】，基础 ${result.baseScore}，最终 ${result.score}。`,
   );
 
   if (state.working.playsUsed >= WORK_PLAYS_PER_DAY) {
@@ -938,9 +1276,13 @@ function rerollWorkCards() {
   }
 
   state.money -= cost;
+  consumeWorkRerollDiscount();
   removeSelectedCardsFromHand();
   state.working.hand = drawWorkCards(state.working.hand, WORK_HAND_SIZE);
   state.working.selectedCardIds = [];
+  if (hasSkill("carefulSelection") && selectedCards.length >= 3) {
+    state.working.nextPlayBonus += 8;
+  }
   state.working.rerollsUsed += 1;
   addLog(state, `花了 ${cost} 资金换掉 ${selectedCards.length} 张牌。`);
   render();
@@ -957,11 +1299,15 @@ function openWorkCardGameModal() {
   const rerollCost = getWorkRerollCost();
   const cardsLeft = state.working.deck.length;
   const canReroll = selectedCards.length > 0 && rerollCost !== null && state.money >= rerollCost;
+  const ownedSkills = getOwnedSkillSummary();
   const selectionText = selectedCards.length === 0
     ? "选择 1-3 张牌出牌，或选中任意张牌花钱换牌。"
     : preview
       ? `当前组合：${preview.label}，本次出牌可得 ${preview.score} 分。`
       : "当前选择无法组成合法牌型，可以改为换牌。";
+  const previewDetail = preview?.notes?.length
+    ? `本次生效：${preview.notes.join("、")}。`
+    : "本次没有额外技能修正。";
 
   const handHtml = state.working.hand
     .map((card) => {
@@ -1015,6 +1361,10 @@ function openWorkCardGameModal() {
             <p>${rerollCost ?? "已用完"}</p>
           </div>
           <div class="modal-section">
+            <strong>换牌上限</strong>
+            <p>${state.working.rerollsUsed} / ${getWorkRerollLimit()}</p>
+          </div>
+          <div class="modal-section">
             <strong>牌堆余量</strong>
             <p>${cardsLeft}</p>
           </div>
@@ -1022,7 +1372,9 @@ function openWorkCardGameModal() {
         <div class="minigame-stage workgame-stage">
           <div class="workgame-callout">
             <strong>${selectionText}</strong>
-            <p>${state.working.lastPlayedLabel ? `上一手：${state.working.lastPlayedLabel} +${state.working.lastPlayedScore}` : "还没出牌。"}${state.working.score >= state.working.targetScore ? " 当前已达标。" : ""}</p>
+            <p>${state.working.lastPlayedLabel ? `上一手：${state.working.lastPlayedLabel} +${state.working.lastPlayedScore}` : "还没出牌。"}${state.working.score >= state.working.targetScore ? " 当前已达标。" : ""}${state.working.nextPlayBonus > 0 ? ` 下一手额外 +${state.working.nextPlayBonus}。` : ""}</p>
+            <p>${preview ? previewDetail : ""}</p>
+            <p>${ownedSkills.length ? `已购技能：${ownedSkills.slice(0, 5).join("、")}${ownedSkills.length > 5 ? " 等" : ""}` : "当前还没有永久技能。"}</p>
           </div>
           <div class="workgame-hand">${handHtml}</div>
         </div>
@@ -1052,11 +1404,15 @@ function finishWorkCardGame() {
   const job = JOBS[state.jobType];
   const targetScore = state.working.targetScore;
   const dayScore = state.working.score;
-  const reachedTarget = dayScore >= targetScore;
-  const extraIncome = reachedTarget ? Math.floor((dayScore - targetScore) * 0.5) : 0;
+  const settlementScore = dayScore < targetScore && hasSkill("safetyPlan")
+    ? Math.floor(dayScore * 1.1)
+    : dayScore;
+  const reachedTarget = settlementScore >= targetScore;
+  const overflowRate = hasSkill("bonusCommission") ? 0.7 : 0.5;
+  const extraIncome = reachedTarget ? Math.floor((settlementScore - targetScore) * overflowRate) : 0;
   const finalIncome = reachedTarget ? job.moneyDelta + extraIncome : Math.floor(job.moneyDelta * 0.8);
   const nextTargetScore = reachedTarget ? Math.round(targetScore * 1.1) : targetScore;
-  const resultLabel = reachedTarget ? (dayScore > targetScore ? "超额达标" : "达标") : "未达标";
+  const resultLabel = reachedTarget ? (settlementScore > targetScore ? "超额达标" : "达标") : "未达标";
 
   state.working.phase = "result";
   state.working.selectedCardIds = [];
@@ -1064,10 +1420,11 @@ function finishWorkCardGame() {
   state.working.incomeDelta = finalIncome - job.moneyDelta;
   state.working.nextTargetScore = nextTargetScore;
   state.working.resultLabel = resultLabel;
+  state.working.settlementScore = settlementScore;
 
   addLog(
     state,
-    `今日工作${resultLabel}，得分 ${formatScore(dayScore)}/${formatScore(targetScore)}，今日收入 ${finalIncome}。`,
+    `今日工作${resultLabel}，结算得分 ${formatScore(settlementScore)}/${formatScore(targetScore)}，今日收入 ${finalIncome}。`,
   );
 
   render();
@@ -1080,7 +1437,7 @@ function showWorkCardResult() {
   }
 
   const job = JOBS[state.jobType];
-  const reachedTarget = state.working.score >= state.working.targetScore;
+  const reachedTarget = state.working.settlementScore >= state.working.targetScore;
   const detailLabel = reachedTarget ? "额外收益" : "未达标结算";
   openModal(
     `
@@ -1095,6 +1452,10 @@ function showWorkCardResult() {
           <div class="modal-section">
             <strong>今日实际得分</strong>
             <p>${formatScore(state.working.score)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>最终结算得分</strong>
+            <p>${formatScore(state.working.settlementScore)}</p>
           </div>
           <div class="modal-section">
             <strong>基础工资</strong>
@@ -1254,6 +1615,9 @@ function resetWorkingState() {
   state.working.nextTargetScore = round2(state.workTargetScore);
   state.working.incomeDelta = 0;
   state.working.finalIncome = 0;
+  state.working.settlementScore = 0;
+  state.working.nextPlayBonus = 0;
+  state.working.rerollDiscountRemaining = 0;
 }
 
 function startDozing() {
@@ -1580,10 +1944,22 @@ function openStoreModal() {
     return;
   }
 
+  const tabButtons = `
+    <div class="store-tabs">
+      <button class="modal-btn ${activeStoreTab === "goods" ? "" : "secondary"}" data-store-tab="goods">常规商店</button>
+      <button class="modal-btn ${activeStoreTab === "skills" ? "" : "secondary"}" data-store-tab="skills">技能购买</button>
+    </div>
+  `;
+  const title = activeStoreTab === "skills" ? "工作技能商店" : "便利店 / 家居城 / 猎头群";
+  const intro = activeStoreTab === "skills"
+    ? "花钱给自己装点新本事，班还是那份班，但结算可以更像样一点。"
+    : "钱不一定能让你幸福，但至少能让今天不要死得那么难看。";
+
   const body = `
     <div class="modal-card">
-      <h3>便利店 / 家居城 / 猎头群</h3>
-      <p>钱不一定能让你幸福，但至少能让今天不要死得那么难看。</p>
+      <h3>${title}</h3>
+      <p>${intro}</p>
+      ${tabButtons}
       <div class="store-list">
         ${renderStoreCards()}
       </div>
@@ -1744,6 +2120,14 @@ function weightedPick(weightTable) {
 }
 
 function renderStoreCards() {
+  if (activeStoreTab === "skills") {
+    return renderSkillStoreCards();
+  }
+
+  return renderGoodsStoreCards();
+}
+
+function renderGoodsStoreCards() {
   const bedCards = Object.values(BEDS)
     .filter((bed) => bed.price > 0)
     .map((bed) => {
@@ -1798,8 +2182,37 @@ function renderStoreCards() {
   return `${bedCards}${jobCards}${itemCards}`;
 }
 
+function renderSkillStoreCards() {
+  return STORE_SKILL_ORDER
+    .map((skillId) => {
+      const skill = SKILLS[skillId];
+      const level = getSkillLevel(skillId);
+      const soldOut = level >= skill.maxPurchases;
+      const progress = skill.maxPurchases > 1 ? `${level}/${skill.maxPurchases}` : level > 0 ? "已拥有" : "未拥有";
+      return `
+        <article class="store-card skill-card">
+          <header>
+            <strong>${skill.name}</strong>
+            <span class="store-meta">${skill.price}</span>
+          </header>
+          <p>${skill.effect}</p>
+          <p>${skill.summary}。当前进度：${progress}。</p>
+          <button class="store-btn" data-action="skill" data-id="${skill.id}" ${!canPurchaseSkill(skill.id) ? "disabled" : ""}>${soldOut ? "已购满" : `购买 ${skill.price}`}</button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function bindStoreEvents() {
   document.querySelector("#close-store")?.addEventListener("click", closeModal);
+
+  document.querySelectorAll("[data-store-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeStoreTab = button.getAttribute("data-store-tab") ?? "goods";
+      openStoreModal();
+    });
+  });
 
   document.querySelectorAll("[data-action='bed']").forEach((button) => {
     button.addEventListener("click", () => buyBed(button.getAttribute("data-id")));
@@ -1814,6 +2227,10 @@ function bindStoreEvents() {
       purchaseItem(button.getAttribute("data-id"));
       openStoreModal();
     });
+  });
+
+  document.querySelectorAll("[data-action='skill']").forEach((button) => {
+    button.addEventListener("click", () => purchaseSkill(button.getAttribute("data-id")));
   });
 
   render();
@@ -1838,6 +2255,19 @@ function switchJob(jobId) {
   state.money -= job.switchCost;
   state.jobType = jobId;
   addLog(state, `你花 ${job.switchCost} 完成了路线切换，当前工作改为 ${job.name}。`);
+  openStoreModal();
+}
+
+function purchaseSkill(skillId) {
+  const skill = SKILLS[skillId];
+  if (!skill || !canPurchaseSkill(skillId)) {
+    return;
+  }
+
+  state.money -= skill.price;
+  state.skillPurchases[skillId] = getSkillLevel(skillId) + 1;
+  addLog(state, `你购买了技能【${skill.name}】，资金 -${skill.price}。`);
+  activeStoreTab = "skills";
   openStoreModal();
 }
 

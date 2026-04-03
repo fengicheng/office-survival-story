@@ -346,6 +346,13 @@ h2 {
   margin-top: 20px;
 }
 
+.store-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0;
+}
+
 .action-btn,
 .modal-btn {
   padding: 14px 18px;
@@ -412,6 +419,10 @@ h2 {
   background: rgba(31, 122, 87, 0.12);
   color: var(--money);
   box-shadow: inset 0 0 0 1px rgba(31, 122, 87, 0.12);
+}
+
+.skill-card {
+  background: linear-gradient(180deg, rgba(255, 248, 239, 0.96), rgba(247, 235, 217, 0.96));
 }
 
 .tip-box {
