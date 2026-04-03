@@ -22,6 +22,9 @@ const WORK_HAND_SIZE = 5;
 const WORK_PLAYS_PER_DAY = 4;
 const WORK_REROLL_COSTS = [50, 100, 200];
 const BASE_WORK_REROLL_LIMIT = 3;
+const WORK_TARGET_GROWTH_MULTIPLIER = 1.2;
+const WORK_EXTRA_INCOME_PER_POINT = 10;
+const BONUS_COMMISSION_EXTRA_INCOME_PER_POINT = 14;
 const SKILLS = {
   pairTraining: {
     id: "pairTraining",
@@ -119,7 +122,7 @@ const SKILLS = {
     price: 2400,
     maxPurchases: 1,
     type: "unique",
-    effect: "超额达标时，超出部分收益系数由 0.5 提升到 0.7",
+    effect: "超额达标时，超出部分额外收益由每分 10 提升到 14",
     summary: "高分回报路线",
   },
   practiceMakesPerfect: {
@@ -829,7 +832,7 @@ function getSceneCopy() {
         tag: "Work Result",
         visual: "working",
         description: `本日牌局已经结束，结果为【${state.working.resultLabel}】。查看结算后会进入夜晚阶段。`,
-        tip: "达标才会提高明日目标分数，未达标则维持不变。",
+        tip: "达标后明日目标分数会乘 1.2，未达标则按完成度折算工资。",
         visualCopy: "班已经上完了，接下来轮到工资给你脸色看。",
       };
     }
@@ -1345,7 +1348,7 @@ function openWorkCardGameModal() {
             <p>${Math.round(state.money)}</p>
           </div>
           <div class="modal-section">
-            <strong>固定工作收益</strong>
+            <strong>当前工作收益</strong>
             <p>${JOBS[state.jobType].moneyDelta}</p>
           </div>
           <div class="modal-section">
@@ -1408,23 +1411,26 @@ function finishWorkCardGame() {
     ? Math.floor(dayScore * 1.1)
     : dayScore;
   const reachedTarget = settlementScore >= targetScore;
-  const overflowRate = hasSkill("bonusCommission") ? 0.7 : 0.5;
-  const extraIncome = reachedTarget ? Math.floor((settlementScore - targetScore) * overflowRate) : 0;
-  const finalIncome = reachedTarget ? job.moneyDelta + extraIncome : Math.floor(job.moneyDelta * 0.8);
-  const nextTargetScore = reachedTarget ? Math.round(targetScore * 1.1) : targetScore;
+  const extraIncomePerPoint = hasSkill("bonusCommission")
+    ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT
+    : WORK_EXTRA_INCOME_PER_POINT;
+  const extraIncome = reachedTarget ? round2((settlementScore - targetScore) * extraIncomePerPoint) : 0;
+  const progressIncome = targetScore > 0 ? round2((settlementScore / targetScore) * job.moneyDelta) : 0;
+  const finalIncome = reachedTarget ? round2(job.moneyDelta + extraIncome) : progressIncome;
+  const nextTargetScore = reachedTarget ? round2(targetScore * WORK_TARGET_GROWTH_MULTIPLIER) : targetScore;
   const resultLabel = reachedTarget ? (settlementScore > targetScore ? "超额达标" : "达标") : "未达标";
 
   state.working.phase = "result";
   state.working.selectedCardIds = [];
   state.working.finalIncome = finalIncome;
-  state.working.incomeDelta = finalIncome - job.moneyDelta;
+  state.working.incomeDelta = round2(finalIncome - job.moneyDelta);
   state.working.nextTargetScore = nextTargetScore;
   state.working.resultLabel = resultLabel;
   state.working.settlementScore = settlementScore;
 
   addLog(
     state,
-    `今日工作${resultLabel}，结算得分 ${formatScore(settlementScore)}/${formatScore(targetScore)}，今日收入 ${finalIncome}。`,
+    `今日工作${resultLabel}，结算得分 ${formatScore(settlementScore)}/${formatScore(targetScore)}，今日收入 ${formatNumber(finalIncome)}。`,
   );
 
   render();
@@ -1438,7 +1444,7 @@ function showWorkCardResult() {
 
   const job = JOBS[state.jobType];
   const reachedTarget = state.working.settlementScore >= state.working.targetScore;
-  const detailLabel = reachedTarget ? "额外收益" : "未达标结算";
+  const detailLabel = reachedTarget ? "额外收益" : "进度折算";
   openModal(
     `
       <div class="modal-card minigame-card workgame-card">
@@ -1459,7 +1465,7 @@ function showWorkCardResult() {
           </div>
           <div class="modal-section">
             <strong>基础工资</strong>
-            <p>${job.moneyDelta}</p>
+            <p>${formatNumber(job.moneyDelta)}</p>
           </div>
           <div class="modal-section">
             <strong>${detailLabel}</strong>
@@ -1469,7 +1475,7 @@ function showWorkCardResult() {
         <div class="modal-grid">
           <div class="modal-section">
             <strong>今日最终收入</strong>
-            <p>${state.working.finalIncome}</p>
+            <p>${formatNumber(state.working.finalIncome)}</p>
           </div>
           <div class="modal-section">
             <strong>明日目标分数</strong>
