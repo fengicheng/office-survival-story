@@ -1086,6 +1086,13 @@ function drawWorkCards(baseHand, count) {
   return sortWorkHand(hand);
 }
 
+function drawWorkCard() {
+  if (state.working.deck.length <= 0) {
+    return null;
+  }
+  return state.working.deck.pop();
+}
+
 function sortWorkHand(hand) {
   return [...hand].sort((left, right) => left.value - right.value || left.id.localeCompare(right.id));
 }
@@ -1234,6 +1241,18 @@ function removeSelectedCardsFromHand() {
   state.working.hand = state.working.hand.filter((card) => !selected.has(card.id));
 }
 
+function replaceSelectedCardsInHand() {
+  const selected = new Set(state.working.selectedCardIds);
+  state.working.hand = state.working.hand
+    .map((card) => {
+      if (!selected.has(card.id)) {
+        return card;
+      }
+      return drawWorkCard();
+    })
+    .filter(Boolean);
+}
+
 function playWorkCardHand() {
   if (state.stage !== "working" || state.working.phase !== "playing") {
     return;
@@ -1280,8 +1299,7 @@ function rerollWorkCards() {
 
   state.money -= cost;
   consumeWorkRerollDiscount();
-  removeSelectedCardsFromHand();
-  state.working.hand = drawWorkCards(state.working.hand, WORK_HAND_SIZE);
+  replaceSelectedCardsInHand();
   state.working.selectedCardIds = [];
   if (hasSkill("carefulSelection") && selectedCards.length >= 3) {
     state.working.nextPlayBonus += 8;
