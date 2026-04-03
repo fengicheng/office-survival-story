@@ -71,7 +71,7 @@ const JOBS = {
     name: "普通公司",
     energyDelta: -18,
     stressDelta: 16,
-    moneyDelta: 600,
+    moneyDelta: 550,
     description: "标准平衡路线。",
   },
   grind: {
@@ -79,7 +79,7 @@ const JOBS = {
     name: "跳槽（卷）",
     energyDelta: -22,
     stressDelta: 20,
-    moneyDelta: 900,
+    moneyDelta: 850,
     switchCost: 5000,
     description: "高风险高收益，适合冲刺财富自由。",
   },
