@@ -1781,7 +1781,7 @@ function openWorkCardGameModal() {
           <div>
             <p class="eyebrow">Today's Work</p>
             <h3>今日搬砖牌局</h3>
-            <p>先盯住工资和差距，其他信息都是辅助。</p>
+            <p class="workgame-intro">先看收入、差距和进度，够了再出牌。</p>
           </div>
           <span class="scene-tag minigame-tag">工作中</span>
         </div>
@@ -1791,10 +1791,13 @@ function openWorkCardGameModal() {
             <strong>${formatNumber(currentExpectedIncome)}</strong>
             <p>基础工资 ${formatNumber(JOBS[state.jobType].moneyDelta)}</p>
           </article>
-          <article class="workgame-focus focus-gap">
-            <span class="workgame-focus-label">还差多少分</span>
+          <article class="workgame-focus focus-target">
+            <span class="workgame-focus-label">目标与差距</span>
             <strong>${formatScore(remainingScore)}</strong>
-            <p>目标 ${formatScore(state.working.targetScore)} / 当前 ${formatScore(state.working.score)}</p>
+            <div class="workgame-mini-pairs">
+              <span>目标 <b>${formatScore(state.working.targetScore)}</b></span>
+              <span>当前 <b>${formatScore(state.working.score)}</b></span>
+            </div>
           </article>
           <article class="workgame-focus focus-progress">
             <span class="workgame-focus-label">出牌进度</span>
@@ -1810,8 +1813,7 @@ function openWorkCardGameModal() {
         </div>
         <div class="minigame-stage workgame-stage">
           <div class="workgame-callout">
-            <strong>${selectionText}</strong>
-            <p>${selectedSummary}</p>
+            <strong>${selectionText}</strong>${selectedCards.length > 0 ? `<span class="workgame-inline-result">${selectedSummary}</span>` : ""}
             <p class="workgame-support">${summaryLine}${state.working.nextPlayBonus > 0 ? ` 下一手额外 +${state.working.nextPlayBonus}。` : ""} ${supportLine}</p>
             ${preview ? `<p class="workgame-detail">${previewDetail}</p>` : ""}
           </div>
