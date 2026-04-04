@@ -115,7 +115,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "每天第一次换牌免费",
-    summary: "降低经济压力",
+    summary: "让花费更轻松",
   },
   rerollMastery: {
     id: "rerollMastery",
@@ -124,7 +124,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "每天最大换牌次数 +1",
-    summary: "提高成型率",
+    summary: "让手牌更顺手",
   },
   carefulSelection: {
     id: "carefulSelection",
@@ -133,7 +133,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "换牌时若本次弃掉 3 张及以上，则下一次出牌最终分数额外 +8",
-    summary: "鼓励大换牌",
+    summary: "鼓励大胆整理手牌",
   },
   safetyPlan: {
     id: "safetyPlan",
@@ -142,7 +142,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "若当天未达标，则最终得分 x1.1",
-    summary: "降低卡线波动",
+    summary: "让卡线时更安心",
   },
   bonusCommission: {
     id: "bonusCommission",
@@ -151,7 +151,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "超额达标时，超出部分额外收益由每分 10 提升到 14",
-    summary: "高分回报路线",
+    summary: "高分回报更明显",
   },
   practiceMakesPerfect: {
     id: "practiceMakesPerfect",
@@ -160,7 +160,7 @@ const SKILLS = {
     maxPurchases: 3,
     type: "stackable",
     effect: "每次出牌额外 +3",
-    summary: "稳定补分",
+    summary: "稳定添一点分数",
   },
   pairDrill: {
     id: "pairDrill",
@@ -169,7 +169,7 @@ const SKILLS = {
     maxPurchases: 3,
     type: "stackable",
     effect: "对子额外 +2",
-    summary: "强化对子流",
+    summary: "让对子更顺手",
   },
   tripleDrill: {
     id: "tripleDrill",
@@ -178,7 +178,7 @@ const SKILLS = {
     maxPurchases: 3,
     type: "stackable",
     effect: "三条最终分数额外 x1.1",
-    summary: "强化三条流",
+    summary: "让三条更亮眼",
   },
   straightDrill: {
     id: "straightDrill",
@@ -187,7 +187,7 @@ const SKILLS = {
     maxPurchases: 3,
     type: "stackable",
     effect: "顺子额外 +4",
-    summary: "强化顺子流",
+    summary: "让顺子更舒服",
   },
   singleTraining: {
     id: "singleTraining",
@@ -196,7 +196,7 @@ const SKILLS = {
     maxPurchases: 3,
     type: "stackable",
     effect: "单张额外 +2",
-    summary: "强化单张保底",
+    summary: "让单张更稳",
   },
   clutchFinish: {
     id: "clutchFinish",
@@ -205,7 +205,7 @@ const SKILLS = {
     maxPurchases: 2,
     type: "stackable",
     effect: "第 4 次出牌额外 +6",
-    summary: "强化收尾",
+    summary: "让收尾更漂亮",
   },
   rerollDiscount: {
     id: "rerollDiscount",
@@ -214,7 +214,7 @@ const SKILLS = {
     maxPurchases: 2,
     type: "stackable",
     effect: "每天换牌价格总额减少 20",
-    summary: "降低换牌成本",
+    summary: "让换牌更省心",
   },
   handPlanning: {
     id: "handPlanning",
@@ -223,7 +223,7 @@ const SKILLS = {
     maxPurchases: 2,
     type: "stackable",
     effect: "每天最大换牌次数额外 +1",
-    summary: "提高成型率",
+    summary: "让成型更从容",
   },
 };
 const STORE_SKILL_ORDER = [
@@ -257,7 +257,7 @@ const BEDS = {
     nightStressPerHour: 1.5,
     morningEnergyPerMinute: 0.14,
     morningStressPerMinute: 0.08,
-    summary: "前期够用，恢复一般。",
+    summary: "前期够用，先把节奏睡顺。",
   },
   spring: {
     id: "spring",
@@ -267,7 +267,7 @@ const BEDS = {
     nightStressPerHour: 1.625,
     morningEnergyPerMinute: 0.18,
     morningStressPerMinute: 0.12,
-    summary: "第一阶段核心升级。",
+    summary: "第一阶段很值得入手的小升级。",
   },
   memory: {
     id: "memory",
@@ -277,7 +277,7 @@ const BEDS = {
     nightStressPerHour: 1.75,
     morningEnergyPerMinute: 0.25,
     morningStressPerMinute: 0.17,
-    summary: "中期稳定器，恢复明显。",
+    summary: "中期会很安心，恢复也更明显。",
   },
   deluxe: {
     id: "deluxe",
@@ -287,7 +287,7 @@ const BEDS = {
     nightStressPerHour: 2.25,
     morningEnergyPerMinute: 0.34,
     morningStressPerMinute: 0.24,
-    summary: "后期接近永动机，但前期很贵。",
+    summary: "后期会非常舒服，只是前期需要慢慢攒。",
   },
 };
 
@@ -298,7 +298,7 @@ const JOBS = {
     energyDelta: -18,
     stressDelta: 16,
     moneyDelta: 550,
-    description: "标准平衡路线。",
+    description: "稳稳当当的日常路线。",
   },
   grind: {
     id: "grind",
@@ -307,7 +307,7 @@ const JOBS = {
     stressDelta: 20,
     moneyDelta: 850,
     switchCost: 5000,
-    description: "高回报路线，适合加速攒出更大的选择空间。",
+    description: "更有冲劲的路线，适合把积累提快一点。",
   },
   easy: {
     id: "easy",
@@ -316,7 +316,7 @@ const JOBS = {
     stressDelta: 14,
     moneyDelta: 420,
     switchCost: 5000,
-    description: "轻松路线，适合稳稳推进每天的节奏。",
+    description: "更轻盈的路线，适合慢慢把每天过顺。",
   },
 };
 
@@ -330,7 +330,7 @@ const ITEMS = {
     use(state) {
       state.inventory.energyDrink -= 1;
       const delta = applyDelta(state, { energy: 12, stress: 1 });
-      addLog(state, `喝下一罐能量饮料，精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。`);
+      addLog(state, `喝下一罐能量饮料，精力 ${formatSigned(delta.energy)}，状态也跟着亮了一点。`);
     },
   },
   stressCube: {
@@ -342,7 +342,7 @@ const ITEMS = {
     use(state) {
       state.inventory.stressCube -= 1;
       const delta = applyDelta(state, { stress: -12 });
-      addLog(state, `捏了会儿解压魔方，压力 ${formatSigned(delta.stress)}。`);
+      addLog(state, `捏了会儿解压魔方，心情慢慢松开了一点，压力 ${formatSigned(delta.stress)}。`);
     },
   },
   sleepPill: {
@@ -354,7 +354,7 @@ const ITEMS = {
     use(state) {
       state.inventory.sleepPill -= 1;
       state.sleepBuff = 1.2;
-      addLog(state, "你吞下安眠药，准备下一觉舒舒服服回一大截状态。");
+      addLog(state, "你吞下安眠药，准备下一觉把状态暖暖地补回来。");
     },
   },
 };
@@ -599,8 +599,8 @@ function createEmptyDayStats(day = 1) {
     bestPlayScore: 0,
     bestPlayLabel: "",
     bestPlayIncome: 0,
-    keyMoment: "今天刚刚开始，先把节奏稳稳打开。",
-    growth: "今天还没买到明显升级体验的东西。",
+    keyMoment: "今天刚刚开始，先慢慢把步调打开。",
+    growth: "今天还没买到会让人眼前一亮的小升级。",
   };
 }
 
@@ -886,28 +886,28 @@ function getBuildSummary() {
   const summaries = [];
   if (hasSkill("burnoutExpertise") || getSkillLevel("tripleDrill") > 0 || hasSkill("performanceSprint")) {
     summaries.push({
-      title: "三条发力流",
-      copy: "你的收益更容易在高质量手和收尾时段明显抬头。",
+      title: "三条小高光流",
+      copy: "你的收益更容易在高质量手和收尾时段亮起来。",
       weight: 3,
     });
   }
   if (hasSkill("processMastery") || getSkillLevel("straightDrill") > 0 || getSkillLevel("handPlanning") > 0) {
     summaries.push({
-      title: "换牌运营流",
-      copy: "你更依赖运营手牌，把资源留给成型时刻。",
+      title: "换牌整理流",
+      copy: "你更擅长整理手牌，把资源留给最顺的时候。",
       weight: 2,
     });
   }
   if (hasSkill("pairTraining") || getSkillLevel("pairDrill") > 0 || hasSkill("safetyPlan") || hasSkill("basicTraining")) {
     summaries.push({
-      title: "稳定保底流",
-      copy: "你更擅长把每天的成果稳稳落袋，节奏很扎实。",
+      title: "稳稳积累流",
+      copy: "你更擅长把每天的成果稳稳收好，节奏很扎实。",
       weight: 2,
     });
   }
   if (hasSkill("soloOperator") || getSkillLevel("singleTraining") > 0) {
     summaries.push({
-      title: "单张稳步流",
+      title: "单张慢慢来流",
       copy: "手气一般的时候也能靠保底拆法慢慢把工资抬起来。",
       weight: 1,
     });
@@ -915,10 +915,10 @@ function getBuildSummary() {
 
   if (summaries.length === 0) {
     return {
-      title: state.bedType === "wood" ? "白板起步流" : "节奏改善流",
+      title: state.bedType === "wood" ? "轻松起步流" : "节奏变顺流",
       copy: state.bedType === "wood"
-        ? "目前还没完全成型，先攒第一笔能明显改善体验的钱。"
-        : "床先升级了，接下来该让工作结算也跟着更顺手。",
+        ? "目前还在慢慢成型，先攒第一笔能明显改善体验的钱。"
+        : "床先升级了，接下来让工作结算也一起变得更顺手。",
     };
   }
 
@@ -938,7 +938,7 @@ function getNextGoal() {
       options.push({
         price: bed.price,
         title: bed.name,
-        copy: `买下后，夜里和回笼觉都会更像在认真补状态。`,
+        copy: `买下后，夜里和回笼觉都会更像在认真照顾自己。`,
       });
     });
 
@@ -948,7 +948,7 @@ function getNextGoal() {
       options.push({
         price: job.switchCost,
         title: job.name,
-        copy: `换路线之后，每天的节奏和赚钱方式都会立刻改一档。`,
+        copy: `换路线之后，每天的节奏和收获方式都会换一种感觉。`,
       });
     });
 
@@ -959,7 +959,7 @@ function getNextGoal() {
       options.push({
         price: skill.price,
         title: skill.name,
-        copy: `${skill.summary}，买完后你的牌局会更容易把分数换成工资。`,
+        copy: `${skill.summary}，买完后你的牌局会更容易把分数变成收获。`,
       });
     });
 
@@ -967,7 +967,7 @@ function getNextGoal() {
     options.push({
       price: item.price,
       title: item.name,
-      copy: `${item.description} 这种小件适合在忙碌日子里灵活补状态。`,
+      copy: `${item.description} 这种小件适合在忙碌日子里轻轻补一口状态。`,
     });
   });
 
@@ -978,7 +978,7 @@ function getNextGoal() {
   if (locked.length === 0) {
     return {
       title: "钱已经够花一笔了",
-      copy: "现在最重要的不是攒着，而是把钱换成更稳的明天。",
+      copy: "现在最重要的不是攒着，而是把钱换成更舒服的明天。",
       delta: 0,
     };
   }
@@ -1067,8 +1067,8 @@ function render() {
   ui.goalCopy.textContent = goal.copy;
   ui.dayProgressValue.textContent = `收入 ${formatNumber(state.dayStats.income ?? 0)} / 消费 ${formatNumber(state.dayStats.spending ?? 0)} / 净收益 ${formatSigned(netIncome)}`;
   ui.dayProgressCopy.textContent = netIncome >= 0
-    ? "今天至少不是白忙，接下来要把这些钱换成更稳的循环。"
-    : "今天花得比赚得多，接下来得让下一段收益追上来。";
+    ? "今天已经有了不错的进展，接下来把这些钱换成更舒服的循环。"
+    : "今天先做了些投入，接下来慢慢把收获追上来。";
   ui.buildValue.textContent = build.title;
   ui.buildCopy.textContent = build.copy;
 
@@ -1099,7 +1099,7 @@ function renderSceneExtra() {
     ui.sceneExtra.innerHTML = `
       <div class="scene-extra-grid">
         <article class="modal-section accent-card">
-          <strong>回笼觉收益</strong>
+          <strong>回笼觉小收获</strong>
           <p>已睡 ${formatNumber(Math.max(0, state.currentTime - state.morning.startTime))} 分钟，补回精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
         </article>
         <article class="modal-section">
@@ -1120,7 +1120,7 @@ function renderSceneExtra() {
     ui.sceneExtra.innerHTML = `
       <div class="scene-extra-grid">
         <article class="modal-section accent-card">
-          <strong>今日赚钱预期</strong>
+          <strong>今日收获预期</strong>
           <p>基础工资 ${formatNumber(job.moneyDelta)}，目标分数 ${formatScore(state.workTargetScore)}。达标就锁住工资，超额部分每 1 分额外值 ${hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT}。</p>
         </article>
         <article class="modal-section">
@@ -1149,7 +1149,7 @@ function renderSceneExtra() {
     ui.sceneExtra.innerHTML = `
       <div class="scene-extra-grid">
         <article class="modal-section accent-card">
-          <strong>现在睡的收益</strong>
+          <strong>现在睡会收获</strong>
           <p>如果现在躺下，能回精力 +${formatNumber(predictedEnergy)}，降压力 -${formatNumber(predictedStress)}。</p>
         </article>
         <article class="modal-section">
@@ -1206,7 +1206,7 @@ function getSceneCopy() {
     if (state.working.phase === "playing") {
       const remaining = Math.max(0, state.working.targetScore - state.working.score);
       return {
-        title: "今日搬砖牌局",
+        title: "今日小牌局",
         tag: "Working Cards",
         visual: "working",
         description: `今天要在 4 次出牌内冲到 ${formatScore(state.working.targetScore)} 分。当前得分 ${formatScore(state.working.score)}，还差 ${formatScore(remaining)} 分。`,
@@ -1232,17 +1232,17 @@ function getSceneCopy() {
         tag: "Working",
         visual: "working",
         description: "你正把今天的标准工作量稳稳推进，等着下班结算。",
-        tip: "工作阶段无法打开商店，结算完成后才会进入夜晚。",
+        tip: "工作阶段先专心推进，等结算完成后再慢慢逛商店。",
         visualCopy: "工作还在继续，成果也在慢慢成形。",
       };
     }
 
     return {
-      title: "准备上班",
+      title: "准备开始一天",
       tag: "Working",
       visual: "working",
       description: `点击开始工作后，会进入 4 次出牌的卡牌工作局。今日目标分数为 ${formatScore(state.workTargetScore)}。`,
-      tip: "工作阶段无法打开商店。第 4 次出牌后会自动结算工资。",
+      tip: "工作阶段先专心推进。第 4 次出牌后会自动结算今日收入。",
       visualCopy: "你看起来很忙，事情也在一步步往前走。",
     };
   }
@@ -1261,7 +1261,7 @@ function getSceneCopy() {
   if (state.stage === "gameover") {
     return {
       title: state.energy <= 0 ? "需要休整" : "需要放松",
-      tag: "Game Over",
+      tag: "Pause",
       visual: "ending",
       description: state.energy <= 0
         ? "今天先把体力补回来，明天还能继续把节奏找顺。"
@@ -1272,8 +1272,8 @@ function getSceneCopy() {
   }
 
   return {
-    title: "财富自由",
-    tag: "Victory",
+    title: "新阶段开启",
+    tag: "New Chapter",
     visual: "ending",
     description: "你已经攒够了开启新阶段的底气。接下来，生活可以按你喜欢的节奏展开。",
     tip: "想试试别的路线，可以重新开局体验不同的成长节奏。",
@@ -1300,18 +1300,18 @@ function renderActions() {
   } else if (state.stage === "working") {
     if (state.working.phase === "idle") {
       actions.push({
-        label: "开始今天的工作",
+        label: "开始今天的安排",
         onClick: resolveWorkDay,
         disabled: state.working.busy,
       });
     } else if (state.working.phase === "playing") {
       actions.push({
-        label: "继续工作牌局",
+        label: "继续今天的小牌局",
         onClick: openWorkCardGameModal,
       });
     } else if (state.working.phase === "result") {
       actions.push({
-        label: "查看工作结算",
+        label: "查看今日收获",
         onClick: showWorkCardResult,
       });
     } else {
@@ -1406,7 +1406,7 @@ function purchaseItem(itemId) {
   }
   state.money -= item.price;
   recordSpending(item.price, `你先花了 ${item.price} 买下 ${item.name}，想给今天多留一点从容空间。`);
-  updateGrowthSummary(`${item.name} 已入手，关键时刻会更好调节状态。`);
+  updateGrowthSummary(`${item.name} 已入手，接下来调节状态会更从容。`);
   state.inventory[item.id] += 1;
   addLog(state, `买入 ${item.name}，资金 -${item.price}。`);
   render();
@@ -1450,7 +1450,7 @@ function resolveWorkDay() {
   state.working.settlementScore = 0;
   state.working.nextPlayBonus = 0;
   state.working.rerollDiscountRemaining = 20 * getSkillLevel("rerollDiscount");
-  addLog(state, "今天的工作开始了。");
+  addLog(state, "今天的小安排开始了。");
   render();
   openWorkCardGameModal();
 }
@@ -1780,10 +1780,10 @@ function openWorkCardGameModal() {
         <div class="minigame-top">
           <div>
             <p class="eyebrow">Today's Work</p>
-            <h3>今日搬砖牌局</h3>
+            <h3>今日小牌局</h3>
             <p class="workgame-intro">先看收入、差距和进度，够了再出牌。</p>
           </div>
-          <span class="scene-tag minigame-tag">工作中</span>
+          <span class="scene-tag minigame-tag">进行中</span>
         </div>
         <div class="workgame-hero">
           <article class="workgame-focus focus-income">
@@ -1907,7 +1907,7 @@ function showWorkCardResult() {
           </div>
           <div class="modal-section">
             <strong>今日值不值</strong>
-            <p>今天的工作已经结出了成果，接下来看看这一整天推进得有多值。</p>
+            <p>今天已经结出了成果，接下来看看这一整天慢慢长出了多少收获。</p>
           </div>
         </div>
         <div class="modal-grid">
@@ -2507,10 +2507,10 @@ function openStoreModal() {
       <button class="modal-btn ${activeStoreTab === "skills" ? "" : "secondary"}" data-store-tab="skills">技能购买</button>
     </div>
   `;
-  const title = activeStoreTab === "skills" ? "工作技能商店" : "便利店 / 家居城 / 猎头群";
+  const title = activeStoreTab === "skills" ? "工作小技能商店" : "便利店 / 家居城 / 新机会";
   const intro = activeStoreTab === "skills"
-    ? "花钱给自己装点新本事，班还是那份班，但结算可以更像样一点。"
-    : "钱不一定能让你幸福，但至少能让今天不要死得那么难看。";
+    ? "花点钱给自己添一点新本事，接下来的每一天都会更顺手。"
+    : "把钱花在舒服的地方，日子往往也会跟着松快一点。";
 
   const body = `
     <div class="modal-card">
@@ -2806,7 +2806,7 @@ function openDailyReportModal() {
             <p>${report.bestPlayScore > 0 ? `${report.bestPlayLabel} +${formatNumber(report.bestPlayScore)}` : "今天还没打出能挂墙上的一手。"}</p>
           </div>
           <div class="modal-section">
-            <strong>关键时刻</strong>
+            <strong>暖心时刻</strong>
             <p>${report.keyMoment}</p>
           </div>
           <div class="modal-section">
@@ -2889,8 +2889,8 @@ function switchJob(jobId) {
   state.money -= job.switchCost;
   recordSpending(job.switchCost, `你花 ${job.switchCost} 切换到了 ${job.name}，是在为接下来几天重做节奏和收益。`);
   state.jobType = jobId;
-  updateGrowthSummary(`工作路线切到 ${job.name}，每天都会换一种更适合自己的推进节奏。`);
-  addLog(state, `你花 ${job.switchCost} 完成了路线切换，当前工作改为 ${job.name}。`);
+  updateGrowthSummary(`工作节奏切到 ${job.name}，每天都会换一种更适合自己的步调。`);
+  addLog(state, `你花 ${job.switchCost} 完成了节奏切换，当前工作改为 ${job.name}。`);
   openStoreModal();
 }
 
@@ -2901,9 +2901,9 @@ function purchaseSkill(skillId) {
   }
 
   state.money -= skill.price;
-  recordSpending(skill.price, `你买下了 ${skill.name}，想让后面的牌局更顺、更像在稳稳赚钱。`);
+  recordSpending(skill.price, `你买下了 ${skill.name}，想让后面的牌局更顺、更像在稳稳积累。`);
   state.skillPurchases[skillId] = getSkillLevel(skillId) + 1;
-  updateGrowthSummary(`${skill.name} 已生效，接下来这条 build 会更像样一点。`);
+  updateGrowthSummary(`${skill.name} 已生效，接下来这条风格会越来越顺手。`);
   addLog(state, `你购买了技能【${skill.name}】，资金 -${skill.price}。`);
   activeStoreTab = "skills";
   openStoreModal();
@@ -2955,7 +2955,7 @@ function addLog(targetState, text) {
 }
 
 function getLogTone(text) {
-  if (/达标|超额|财富自由|购买了技能|升级成了|终于结算了|睡到了天亮|偷到|里程碑|锁住工资/.test(text)) {
+  if (/达标|超额|新阶段|购买了技能|升级成了|终于结算了|睡到了天亮|补回|里程碑|锁住工资/.test(text)) {
     return "positive-log";
   }
   if (/时间已经到了|放慢一点|夜间放松|睡眠节奏调整/.test(text)) {
@@ -2989,7 +2989,7 @@ function checkEndConditions() {
     state.morning.dozing = false;
     state.stage = "victory";
     closeModal();
-    addLog(state, "存款已经攒到位了，新阶段正式开启。");
+    addLog(state, "存款已经攒到位了，新阶段温柔地展开了。");
     return true;
   }
   return false;
@@ -3017,7 +3017,7 @@ function formatTime(rawMinutes) {
 function stageLabel(stage) {
   const labels = {
     morning: "早晨阶段",
-    working: "工作阶段",
+    working: "工作时段",
     night: "夜晚阶段",
     gameover: "结局",
     victory: "结局",
