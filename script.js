@@ -11,7 +11,7 @@ const BGM_TRACKS = [
   "./Lo-Fi Blue Morning Loop-1.mp3",
   "./Lo-Fi Blue Morning Loop-2.mp3",
 ];
-const WORK_EVENT_SOURCE = "./随机事件表-工作阶段.md";
+const WORK_EVENT_SOURCE = "./随机事件表-打工记.md";
 const WORK_EVENT_RARITY_PROFILES = [
   { 普通: 55, 少见: 28, 稀有: 12, 极稀有: 5 },
   { 普通: 45, 少见: 30, 稀有: 18, 极稀有: 7 },
@@ -26,32 +26,32 @@ const WORK_TARGET_GROWTH_MULTIPLIER = 1.2;
 const WORK_EXTRA_INCOME_PER_POINT = 10;
 const BONUS_COMMISSION_EXTRA_INCOME_PER_POINT = 14;
 const WEATHER_POOL = [
-  "晴，阳光很好，但和你没什么关系。",
-  "阴，办公室的光线刚好适合怀疑人生。",
-  "多云，适合把情绪装得和桌面一样平。",
-  "暴雨，迟到听起来终于像个合理借口。",
-  "闷热，今天耐心蒸发得会比平时快。",
-  "大风，外面的自由吹得比工位上的空调更真。",
-  "雷阵雨，适合边听键盘声边脑补世界末日。",
-  "薄雾，今天的目标和人生都不太清晰。",
+  "晴，适合把今天安排得明明白白。",
+  "阴，节奏柔和，适合稳稳推进手头的事。",
+  "多云，适合把状态调到舒服的工作节拍。",
+  "暴雨，正好提醒你把步子放稳一点。",
+  "闷热，记得给自己留点喝水和放松的时间。",
+  "大风，像是在替你把今天的灵感吹快一点。",
+  "雷阵雨，节奏明显，适合一鼓作气把事情做顺。",
+  "薄雾，适合先完成眼前的小目标，再慢慢展开今天。",
 ];
 const FORTUNE_POOL = [
-  "大凶，今天的班大概率不会轻易放过你。",
-  "凶，适合谨慎保命，不适合过度上头。",
-  "平，正常发挥就已经很不容易。",
-  "小吉，今天也许不至于白上。",
-  "中吉，最后关头可能有机会把班补回来。",
-  "大吉，适合搏一把高分，手气可能站你这边。",
+  "平稳，按自己的节奏推进就很好。",
+  "顺手，适合先拿下基础成果，再看机会加一把速。",
+  "向上，今天容易把小优势慢慢滚成大收获。",
+  "小吉，稳稳发挥就能看到不错的进展。",
+  "中吉，关键时刻有机会把结果再抬一档。",
+  "大吉，适合大胆冲一次高分，今天的手感很可能站你这边。",
 ];
 const ADVICE_POOL = [
   "先把保底工资锁住，再考虑冲奖金区。",
   "如果前两手一般，留点资源给第 4 手收尾。",
-  "换牌成本不低，前两手别太上头。",
-  "状态一般时，保住基础工资比硬冲更值。",
+  "换牌成本不低，前两手保持从容更划算。",
+  "状态一般时，先把基础工资稳稳拿下也很值。",
   "今天若起手顺，可以大胆把高倍率牌型做大。",
-  "别急着证明自己，先让今天别白上。",
-  "如果已经达标，就开始盯着超额区的奖金。",
-  "道具和床都在替你兜底，别把每一手都打成绝命局。",
+  "先把节奏打顺，再慢慢把收益往上抬。",
+  "如果已经达标，就可以放心看向超额区的奖金。",
+  "道具和床都在替你加成，把每一手都当成推进就好。",
 ];
 const SKILLS = {
   pairTraining: {
@@ -65,12 +65,12 @@ const SKILLS = {
   },
   burnoutExpertise: {
     id: "burnoutExpertise",
-    name: "爆肝专精",
+    name: "冲刺专精",
     price: 2000,
     maxPurchases: 1,
     type: "unique",
     effect: "三条最终分数 x1.3",
-    summary: "高爆发路线",
+    summary: "高发力路线",
   },
   processMastery: {
     id: "processMastery",
@@ -106,7 +106,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "每天第 4 次出牌最终分数 x1.5",
-    summary: "收尾爆发",
+    summary: "收尾发力",
   },
   quickReshuffle: {
     id: "quickReshuffle",
@@ -142,7 +142,7 @@ const SKILLS = {
     maxPurchases: 1,
     type: "unique",
     effect: "若当天未达标，则最终得分 x1.1",
-    summary: "降低卡线风险",
+    summary: "降低卡线波动",
   },
   bonusCommission: {
     id: "bonusCommission",
@@ -307,7 +307,7 @@ const JOBS = {
     stressDelta: 20,
     moneyDelta: 850,
     switchCost: 5000,
-    description: "高风险高收益，适合冲刺财富自由。",
+    description: "高回报路线，适合加速攒出更大的选择空间。",
   },
   easy: {
     id: "easy",
@@ -316,7 +316,7 @@ const JOBS = {
     stressDelta: 14,
     moneyDelta: 420,
     switchCost: 5000,
-    description: "低风险低收益，适合保命。",
+    description: "轻松路线，适合稳稳推进每天的节奏。",
   },
 };
 
@@ -354,7 +354,7 @@ const ITEMS = {
     use(state) {
       state.inventory.sleepPill -= 1;
       state.sleepBuff = 1.2;
-      addLog(state, "你吞下安眠药，准备下一觉狠狠干回点状态。");
+      addLog(state, "你吞下安眠药，准备下一觉舒舒服服回一大截状态。");
     },
   },
 };
@@ -599,8 +599,8 @@ function createEmptyDayStats(day = 1) {
     bestPlayScore: 0,
     bestPlayLabel: "",
     bestPlayIncome: 0,
-    keyMoment: "今天刚刚开始，先想办法别白上班。",
-    growth: "今天还没买到能明显改变体感的东西。",
+    keyMoment: "今天刚刚开始，先把节奏稳稳打开。",
+    growth: "今天还没买到明显升级体验的东西。",
   };
 }
 
@@ -661,7 +661,7 @@ function createInitialState() {
     log: [],
   };
 
-  addLog(freshState, "闹钟响了。今天也得想办法活下来。");
+  addLog(freshState, "闹钟响了。新的一天，慢慢推进就好。");
   return freshState;
 }
 
@@ -886,8 +886,8 @@ function getBuildSummary() {
   const summaries = [];
   if (hasSkill("burnoutExpertise") || getSkillLevel("tripleDrill") > 0 || hasSkill("performanceSprint")) {
     summaries.push({
-      title: "三条爆发流",
-      copy: "你的收益更容易在高爆发手和收尾时段突然抬头。",
+      title: "三条发力流",
+      copy: "你的收益更容易在高质量手和收尾时段明显抬头。",
       weight: 3,
     });
   }
@@ -901,24 +901,24 @@ function getBuildSummary() {
   if (hasSkill("pairTraining") || getSkillLevel("pairDrill") > 0 || hasSkill("safetyPlan") || hasSkill("basicTraining")) {
     summaries.push({
       title: "稳定保底流",
-      copy: "你更擅长把每天的班稳稳落袋，不轻易白上。",
+      copy: "你更擅长把每天的成果稳稳落袋，节奏很扎实。",
       weight: 2,
     });
   }
   if (hasSkill("soloOperator") || getSkillLevel("singleTraining") > 0) {
     summaries.push({
-      title: "单张保命流",
-      copy: "手气差的时候也能靠保底拆法慢慢苟住工资。",
+      title: "单张稳步流",
+      copy: "手气一般的时候也能靠保底拆法慢慢把工资抬起来。",
       weight: 1,
     });
   }
 
   if (summaries.length === 0) {
     return {
-      title: state.bedType === "wood" ? "白板社畜流" : "生存改善流",
+      title: state.bedType === "wood" ? "白板起步流" : "节奏改善流",
       copy: state.bedType === "wood"
-        ? "目前还没成型，先攒第一笔能明显改善体感的钱。"
-        : "床先升级了，接下来该让工作结算也跟着变好看。",
+        ? "目前还没完全成型，先攒第一笔能明显改善体验的钱。"
+        : "床先升级了，接下来该让工作结算也跟着更顺手。",
     };
   }
 
@@ -938,7 +938,7 @@ function getNextGoal() {
       options.push({
         price: bed.price,
         title: bed.name,
-        copy: `买下后，夜里和回笼觉都会明显更像在恢复，不像在硬挺。`,
+        copy: `买下后，夜里和回笼觉都会更像在认真补状态。`,
       });
     });
 
@@ -948,7 +948,7 @@ function getNextGoal() {
       options.push({
         price: job.switchCost,
         title: job.name,
-        copy: `换路线之后，每天的风险和赚钱节奏都会立刻改一档。`,
+        copy: `换路线之后，每天的节奏和赚钱方式都会立刻改一档。`,
       });
     });
 
@@ -967,7 +967,7 @@ function getNextGoal() {
     options.push({
       price: item.price,
       title: item.name,
-      copy: `${item.description} 这种小件适合在危险日子里救命。`,
+      copy: `${item.description} 这种小件适合在忙碌日子里灵活补状态。`,
     });
   });
 
@@ -992,11 +992,11 @@ function getNextGoal() {
 
 function getItemUseCase(item) {
   const useCases = {
-    energyDrink: "适合早晨抢救或夜里保命。",
-    stressCube: "适合在压力快爆时拉一把。",
-    sleepPill: "适合准备狠狠干回一觉的时候。",
+    energyDrink: "适合早晨提振状态或夜里补一口能量。",
+    stressCube: "适合在忙的时候帮自己快速放松一下。",
+    sleepPill: "适合准备舒舒服服睡一觉的时候。",
   };
-  return useCases[item.id] ?? "适合在危险节点给自己留条后路。";
+  return useCases[item.id] ?? "适合在关键节点帮自己把状态调顺。";
 }
 
 function getBedImmediateImpact(bed) {
@@ -1006,11 +1006,11 @@ function getBedImmediateImpact(bed) {
 
 function getSkillImpact(skill) {
   const impactBySkill = {
-    burnoutExpertise: "最适合三条爆发，成型时常能多抬一大截工资。",
+    burnoutExpertise: "最适合三条发力，成型时常能多抬一大截工资。",
     processMastery: "顺子成型时更值钱，适合运营手牌。",
     soloOperator: "烂手也能有保底，但对子会更难看。",
     performanceSprint: "第 4 手翻盘时最有存在感。",
-    safetyPlan: "卡线日子更稳，不容易白上。",
+    safetyPlan: "卡线日子更稳，更容易把成果带回家。",
     bonusCommission: "超额区开始真正值钱，适合冲高分。",
   };
   return impactBySkill[skill.id] ?? `${skill.summary}，典型会把每天的分数更顺地换成钱。`;
@@ -1021,13 +1021,13 @@ function getStoreRecommendation(kind, id) {
     return "当前最值";
   }
   if (kind === "skill" && (id === "basicTraining" || id === "safetyPlan") && state.money >= SKILLS[id].price) {
-    return "适合保命";
+    return "适合稳步推进";
   }
   if (kind === "skill" && (id === "bonusCommission" || id === "performanceSprint")) {
     return "适合冲钱";
   }
   if (kind === "item" && id === "energyDrink") {
-    return "适合救命";
+    return "适合补状态";
   }
   if (kind === "item" && id === "sleepPill") {
     return "适合过夜";
@@ -1100,10 +1100,10 @@ function renderSceneExtra() {
       <div class="scene-extra-grid">
         <article class="modal-section accent-card">
           <strong>回笼觉收益</strong>
-          <p>已睡 ${formatNumber(Math.max(0, state.currentTime - state.morning.startTime))} 分钟，偷到精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
+          <p>已睡 ${formatNumber(Math.max(0, state.currentTime - state.morning.startTime))} 分钟，补回精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
         </article>
         <article class="modal-section">
-          <strong>当前风险</strong>
+          <strong>当前节奏</strong>
           <p>${risk.label}。${risk.copy}</p>
         </article>
         <article class="modal-section">
@@ -1153,7 +1153,7 @@ function renderSceneExtra() {
           <p>如果现在躺下，能回精力 +${formatNumber(predictedEnergy)}，降压力 -${formatNumber(predictedStress)}。</p>
         </article>
         <article class="modal-section">
-          <strong>继续熬 1 小时</strong>
+          <strong>夜间放松 1 小时</strong>
           <p>短期会减压，但明早更容易背上睡眠债${debtHours > 0 ? `，而且已经少睡 ${debtHours} 小时。` : "。"} </p>
         </article>
         <article class="modal-section">
@@ -1187,18 +1187,18 @@ function getSceneCopy() {
         title: "回笼觉加载中",
         tag: "Morning Doze",
         visual: "morning",
-        description: "你正躺在床上装死，时间却越跑越快。现在每一次看手机，都会把你离迟到再推近一点。",
-        tip: "回笼觉会自动推进时间。随时点“查看手机”，可以选择继续睡或立刻起床。",
-        visualCopy: "最危险的不是闹钟，而是那句“再睡五分钟”。",
+        description: "你正躺在床上补一点状态，时间也在轻快往前走。每次看手机，都会帮你重新确认今天的节奏。",
+        tip: "回笼觉会自动推进时间。随时点“查看手机”，可以选择继续睡或从容起床。",
+        visualCopy: "有时候，一句“再睡五分钟”也能睡出一点小惊喜。",
       };
     }
     return {
       title: "闹钟响了",
       tag: "Morning",
       visual: "morning",
-      description: "07:30，社畜的一天从痛苦中醒来。你可以立刻起床，也可以赌一把回笼觉的高收益。",
-      tip: "早晨回笼觉的单位收益高于夜间睡觉，但会触发逐渐加速的迟到风险。",
-      visualCopy: "太阳很温柔，班却一点也不温柔。",
+      description: "07:30，新的一天开始了。你可以立刻起床，也可以多补一会儿状态再出发。",
+      tip: "早晨回笼觉的单位收益高于夜间睡觉，但时间会越来越快，适合把握节奏。",
+      visualCopy: "太阳很温柔，今天也可以温柔一点地推进。",
     };
   }
 
@@ -1211,7 +1211,7 @@ function getSceneCopy() {
         visual: "working",
         description: `今天要在 4 次出牌内冲到 ${formatScore(state.working.targetScore)} 分。当前得分 ${formatScore(state.working.score)}，还差 ${formatScore(remaining)} 分。`,
         tip: "第 4 次出牌结束后会自动结算。换牌需要直接花钱购买。",
-        visualCopy: "今天的活，被压缩成了四手牌。",
+        visualCopy: "今天的工作，被整理成了四手牌。",
       };
     }
 
@@ -1222,7 +1222,7 @@ function getSceneCopy() {
         visual: "working",
         description: `本日牌局已经结束，结果为【${state.working.resultLabel}】。查看结算后会进入夜晚阶段。`,
         tip: "达标后明日目标分数会乘 1.2，未达标则按完成度折算工资。",
-        visualCopy: "班已经上完了，接下来轮到工资给你脸色看。",
+        visualCopy: "今天的工作已经收尾，接下来看看成果长什么样。",
       };
     }
 
@@ -1231,9 +1231,9 @@ function getSceneCopy() {
         title: "正在努力搬砖",
         tag: "Working",
         visual: "working",
-        description: "你正把今天的标准工作量硬生生扛完，等着下班结算。",
+        description: "你正把今天的标准工作量稳稳推进，等着下班结算。",
         tip: "工作阶段无法打开商店，结算完成后才会进入夜晚。",
-        visualCopy: "班还没上完，但人已经先累了。",
+        visualCopy: "工作还在继续，成果也在慢慢成形。",
       };
     }
 
@@ -1243,31 +1243,31 @@ function getSceneCopy() {
       visual: "working",
       description: `点击开始工作后，会进入 4 次出牌的卡牌工作局。今日目标分数为 ${formatScore(state.workTargetScore)}。`,
       tip: "工作阶段无法打开商店。第 4 次出牌后会自动结算工资。",
-      visualCopy: "你看起来很忙，事实上也确实很忙。",
+      visualCopy: "你看起来很忙，事情也在一步步往前走。",
     };
   }
 
   if (state.stage === "night") {
     return {
-      title: "夜深了，还睡吗",
+      title: "夜深了，怎么安排",
       tag: "Night",
       visual: "night",
-      description: "23:30 之后终于回到自己的时间。你可以去睡，也可以靠熬夜娱乐把压力甩掉一点。",
-      tip: "熬夜能减压，但会持续透支精力。连续熬夜 3 小时后，每小时还会额外扣精力。",
-      visualCopy: "白天的命是老板的，夜里的命好像也不是自己的。",
+      description: "23:30 之后轮到你安排自己的时间了。你可以去睡，也可以留一小时给夜间放松。",
+      tip: "夜间放松能减压，但也会消耗精力。连续放松 3 小时后，每小时还会额外扣精力。",
+      visualCopy: "白天认真工作，夜里也别忘了给自己一点空间。",
     };
   }
 
   if (state.stage === "gameover") {
     return {
-      title: state.energy <= 0 ? "过劳死" : "精神崩溃",
+      title: state.energy <= 0 ? "需要休整" : "需要放松",
       tag: "Game Over",
       visual: "ending",
       description: state.energy <= 0
-        ? "身体终于抗议到底，你没能再撑过这个班。"
-        : "压力把最后一根弦扯断了，你在工位上彻底爆掉。",
-      tip: "重新开局后，可以优先升级床铺，或者少熬一点夜。",
-      visualCopy: "活着上班，已经是一种顶级技术活。",
+        ? "今天先把体力补回来，明天还能继续把节奏找顺。"
+        : "今天需要先放松一下，等状态回来再继续推进。",
+      tip: "重新开局后，可以优先升级床铺，或者把夜间放松时间控制得更舒服一点。",
+      visualCopy: "暂停一下，也是为了下一次更轻松地出发。",
     };
   }
 
@@ -1275,9 +1275,9 @@ function getSceneCopy() {
     title: "财富自由",
     tag: "Victory",
     visual: "ending",
-    description: "你终于攒够了离开的底气。今天起，再也不用把生命按工时切成碎片。",
-    tip: "想试试别的路线，可以重新开局走一把极限卷王流。",
-    visualCopy: "不是爱上班，是终于可以不上班了。",
+    description: "你已经攒够了开启新阶段的底气。接下来，生活可以按你喜欢的节奏展开。",
+    tip: "想试试别的路线，可以重新开局体验不同的成长节奏。",
+    visualCopy: "认真积累的每一天，都会慢慢长成更大的选择权。",
   };
 }
 
@@ -1323,7 +1323,7 @@ function renderActions() {
     }
   } else if (state.stage === "night") {
     actions.push({ label: "睡觉", onClick: openSleepModal });
-    actions.push({ label: "熬夜 1 小时", style: "warning", onClick: stayUpOneHour });
+    actions.push({ label: "夜间放松 1 小时", style: "warning", onClick: stayUpOneHour });
     actions.push({ label: "商店", style: "secondary", onClick: openStoreModal });
   } else {
     actions.push({
@@ -1405,8 +1405,8 @@ function purchaseItem(itemId) {
     return;
   }
   state.money -= item.price;
-  recordSpending(item.price, `你先花了 ${item.price} 买下 ${item.name}，想给今天多留一点兜底空间。`);
-  updateGrowthSummary(`${item.name} 已入手，关键时刻至少不会只能硬扛。`);
+  recordSpending(item.price, `你先花了 ${item.price} 买下 ${item.name}，想给今天多留一点从容空间。`);
+  updateGrowthSummary(`${item.name} 已入手，关键时刻会更好调节状态。`);
   state.inventory[item.id] += 1;
   addLog(state, `买入 ${item.name}，资金 -${item.price}。`);
   render();
@@ -1421,9 +1421,9 @@ function transitionToWork() {
   state.morning.dozing = false;
   resetWorkingState();
   if (hadDozeBenefit) {
-    state.dayStats.keyMoment = `你带着回笼觉偷来的精力 +${formatNumber(state.morning.recoveredEnergy)}、压力 -${formatNumber(state.morning.reducedStress)} 去上班了。`;
+    state.dayStats.keyMoment = `你带着回笼觉补回的精力 +${formatNumber(state.morning.recoveredEnergy)}、压力 -${formatNumber(state.morning.reducedStress)} 去上班了。`;
   }
-  addLog(state, "你挣扎着爬起来，准备去公司打卡。");
+  addLog(state, "你起床出发，准备把今天的安排稳稳展开。");
   render();
 }
 
@@ -1450,7 +1450,7 @@ function resolveWorkDay() {
   state.working.settlementScore = 0;
   state.working.nextPlayBonus = 0;
   state.working.rerollDiscountRemaining = 20 * getSkillLevel("rerollDiscount");
-  addLog(state, "今天的班开始了。");
+  addLog(state, "今天的工作开始了。");
   render();
   openWorkCardGameModal();
 }
@@ -1546,7 +1546,7 @@ function evaluateWorkCards(cards) {
     baseScore = sum * 3;
     if (hasSkill("burnoutExpertise")) {
       multiplier *= 1.3;
-      notes.push("爆肝专精");
+      notes.push("冲刺专精");
     }
     const tripleDrillLevel = getSkillLevel("tripleDrill");
     multiplier *= 1.1 ** tripleDrillLevel;
@@ -1702,7 +1702,7 @@ function rerollWorkCards() {
   }
 
   state.money -= cost;
-  recordSpending(cost, `你花了 ${cost} 资金换牌，赌的是后面能把这笔钱再挣回来。`);
+  recordSpending(cost, `你花了 ${cost} 资金换牌，是在为后面的更高收益做准备。`);
   consumeWorkRerollDiscount();
   replaceSelectedCardsInHand();
   state.working.selectedCardIds = [];
@@ -1864,7 +1864,7 @@ function finishWorkCardGame() {
   } else if (reachedTarget && settlementScore > targetScore * 1.2 && settlementScore <= targetScore * 1.5) {
     resultLabel = "超额达标";
   } else if (reachedTarget && settlementScore > targetScore * 1.5) {
-    resultLabel = "爆单日";
+    resultLabel = "高光日";
   }
 
   state.working.phase = "result";
@@ -1881,7 +1881,7 @@ function finishWorkCardGame() {
   );
   state.dayStats.keyMoment = reachedTarget
     ? `今天工作${resultLabel}，你把日收入稳稳结到了 ${formatNumber(finalIncome)}。`
-    : `今天没达标，但至少还结回了 ${formatNumber(finalIncome)}，不算彻底白上。`;
+    : `今天还在追目标，但已经稳稳结回了 ${formatNumber(finalIncome)}，积累没有白费。`;
 
   render();
   showWorkCardResult();
@@ -1907,7 +1907,7 @@ function showWorkCardResult() {
           </div>
           <div class="modal-section">
             <strong>今日值不值</strong>
-            <p>这班至少换回了钱，接下来要看它值不值得你今天掉的那点命。</p>
+            <p>今天的工作已经结出了成果，接下来看看这一整天推进得有多值。</p>
           </div>
         </div>
         <div class="modal-grid">
@@ -2112,7 +2112,7 @@ function beginDozing(isResume) {
     state.morning.recoveredEnergy = 0;
     state.morning.reducedStress = 0;
     state.morning.startTime = state.currentTime;
-    addLog(state, "你把闹钟往旁边一丢，决定偷一点高收益回笼觉。");
+    addLog(state, "你把闹钟往旁边一放，决定多补一会儿高收益回笼觉。");
   }
   state.morning.lastCheckedTime = state.currentTime;
   state.morning.lastCheckedEnergy = state.energy;
@@ -2185,13 +2185,13 @@ function getDozeRiskInfo(currentTime) {
   }
   if (currentTime < 8 * 60 + 25) {
     return {
-      label: "危险",
-      copy: "后面每几分钟都在逼你用全勤和罚款对赌。",
+      label: "冲刺",
+      copy: "后面每几分钟都很值，适合留意节奏并及时收手。",
     };
   }
   return {
-    label: "极限",
-    copy: "现在再赌，就是把今天的班直接押上去。",
+    label: "临界",
+    copy: "现在继续睡更适合见好就收，留点余裕会更舒服。",
   };
 }
 
@@ -2221,18 +2221,18 @@ function openPhoneModal() {
   const body = `
     <div class="modal-card">
       <h3>手机亮起来了</h3>
-      <p>现在是 <strong>${formatTime(state.currentTime)}</strong>。你盯着时间犹豫了一下，决定是马上起床，还是继续赌后面的几分钟。</p>
+      <p>现在是 <strong>${formatTime(state.currentTime)}</strong>。你看了眼时间，决定是现在起床，还是再多补几分钟状态。</p>
       <div class="modal-grid">
         <div class="modal-section">
           <strong>本次累计收益</strong>
-          <p>到现在为止，你已经偷到精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
+          <p>到现在为止，你已经补回精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
         </div>
         <div class="modal-section">
           <strong>现在起床</strong>
           <p>你可以直接带着这些收益去上班，至少今天不是纯亏。</p>
         </div>
         <div class="modal-section">
-          <strong>继续睡的风险</strong>
+          <strong>继续睡的节奏</strong>
           <p>${risk.label}。${risk.copy}</p>
         </div>
         <div class="modal-section">
@@ -2241,7 +2241,7 @@ function openPhoneModal() {
         </div>
       </div>
       <div class="modal-actions">
-        <button id="continue-dozing" class="modal-btn">继续赌 5 分钟</button>
+        <button id="continue-dozing" class="modal-btn">再睡 5 分钟</button>
         <button id="wake-up-now" class="modal-btn secondary">带着收益起床</button>
       </div>
     </div>
@@ -2269,9 +2269,9 @@ function forceWake() {
   state.morning.lastCheckedStress = state.stress;
   addLog(
     state,
-    `你一睁眼发现已经迟到了。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
+    `你一睁眼发现时间已经到了。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
   );
-  state.dayStats.keyMoment = `回笼觉翻车了：虽然偷到精力 +${formatNumber(state.morning.recoveredEnergy)}、压力 -${formatNumber(state.morning.reducedStress)}，但迟到还是狠狠干了你一脚。`;
+  state.dayStats.keyMoment = `回笼觉虽然补回了精力 +${formatNumber(state.morning.recoveredEnergy)}、压力 -${formatNumber(state.morning.reducedStress)}，但也提醒你明天可以再早一点收手。`;
 
   if (finalizeAfterEndCheck()) {
     return;
@@ -2282,20 +2282,20 @@ function forceWake() {
   openModal(
     `
       <div class="modal-card">
-        <h3>睡过头了</h3>
-        <p>时间已经到 <strong>08:30</strong>。你是被现实一把掀下床的，今天迟到已经板上钉钉。</p>
+        <h3>时间提醒</h3>
+        <p>时间已经到 <strong>08:30</strong>。你需要加快一点节奏，带着刚补回来的状态开始今天。</p>
         <div class="modal-grid">
           <div class="modal-section">
-            <strong>刚才偷到的收益</strong>
+            <strong>刚才补回的状态</strong>
             <p>精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
           </div>
           <div class="modal-section">
-            <strong>迟到惩罚</strong>
+            <strong>时间调整</strong>
             <p>精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。</p>
           </div>
           <div class="modal-section">
             <strong>最终净结果</strong>
-            <p>你并不是一无所获，但这笔收益已经被迟到罚款和精神伤害硬生生啃掉一大块。</p>
+            <p>你依然带走了一部分状态收益，下次只要再早一点收手，整体会更漂亮。</p>
           </div>
         </div>
         <div class="modal-actions">
@@ -2333,16 +2333,16 @@ function openSleepModal() {
           <p>精力 +${formatNumber(predictedEnergy)}，压力 -${formatNumber(predictedStress)}，睡眠倍率 x${state.sleepBuff.toFixed(1)}。</p>
         </div>
         <div class="modal-section">
-          <strong>睡眠债</strong>
-          <p>${debtHours > 0 ? `本次少睡 ${debtHours} 小时，明天精力上限会下降，起始压力也会上升。` : "这是一觉标准的 8 小时睡眠，没有额外惩罚。"}</p>
+          <strong>睡眠节奏</strong>
+          <p>${debtHours > 0 ? `本次少睡 ${debtHours} 小时，明天精力上限会下降，起始压力也会上升。早点休息会更舒服。` : "这是一觉标准的 8 小时睡眠，状态会很完整。"}</p>
         </div>
         <div class="modal-section">
           <strong>床铺加成</strong>
           <p>${bed.name} 这次比木板床多给你精力 +${formatNumber(compareEnergy)}，压力额外 -${formatNumber(compareStress)}。</p>
         </div>
         <div class="modal-section">
-          <strong>现在睡 / 继续熬</strong>
-          <p>现在睡是把今天剩下的命往回拉；继续熬 1 小时只能暂时减压，明早会更像报应。</p>
+          <strong>现在睡 / 夜间放松</strong>
+          <p>现在睡能把今天的状态一次补足；再留 1 小时给自己也可以，只是明早会稍微紧一点。</p>
         </div>
       </div>
       <div class="modal-actions">
@@ -2388,14 +2388,14 @@ function sleepUntilMorning() {
     sleepStress: round2(delta.stress),
     sleepDebtHours: debtHours,
     sleepCopy: debtHours > 0
-      ? `你把人睡回来了点，但睡眠债还是在后面追。`
-      : `这一觉终于像样，明天起床至少不会只剩工号。`,
+      ? `你已经把状态补回来了不少，明天早点休息会更轻松。`
+      : `这一觉很完整，明天起床会更有精神。`,
   };
   startNewDayState();
 
   addLog(
     state,
-    `你睡到了天亮。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。${debtHours > 0 ? `睡眠不足 ${debtHours} 小时。` : "今天起床不算太惨。"}`
+    `你睡到了天亮。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。${debtHours > 0 ? `本次少睡 ${debtHours} 小时。` : "今天起床状态不错。"}`
   );
 
   if (finalizeAfterEndCheck()) {
@@ -2416,7 +2416,7 @@ function applySleepDebt(debtHours) {
   const delta = applyDelta(state, { stress: debtHours * 3 });
   addLog(
     state,
-    `睡眠债生效：今日精力上限降到 ${state.energyMax}，起始压力 ${formatSigned(delta.stress)}。`,
+    `睡眠节奏调整生效：今日精力上限调到 ${state.energyMax}，起始压力 ${formatSigned(delta.stress)}。`,
   );
 }
 
@@ -2432,7 +2432,7 @@ function stayUpOneHour() {
 
   addLog(
     state,
-    `你又熬了 1 小时夜。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。`,
+    `你给自己留了 1 小时夜间放松时间。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}。`,
   );
 
   if (finalizeAfterEndCheck()) {
@@ -2453,10 +2453,10 @@ function stayUpOneHour() {
       sleepEnergy: 0,
       sleepStress: 0,
       sleepDebtHours: 8,
-      sleepCopy: "你几乎没睡，今天的日终收获也只能算勉强留下点钱。",
+      sleepCopy: "你几乎没睡，今天更适合把节奏放慢一点，慢慢往前推。",
     };
     startNewDayState();
-    addLog(state, "天亮了，你干脆一夜没睡，带着满身疲惫直接迎接新一天。");
+    addLog(state, "天亮了，你几乎一夜没睡，也给自己开启了一个更轻松推进的新白天。");
     if (finalizeAfterEndCheck()) {
       return;
     }
@@ -2710,7 +2710,7 @@ function renderGoodsStoreCards() {
     .filter((job) => job.switchCost)
     .map((job) => {
       const isCurrent = state.jobType === job.id;
-      const tag = job.id === "grind" ? "适合冲钱" : "适合保命";
+      const tag = job.id === "grind" ? "适合冲钱" : "适合稳步推进";
       return `
         <article class="store-card">
           <header>
@@ -2874,7 +2874,7 @@ function buyBed(bedId) {
     return;
   }
   state.money -= bed.price;
-  recordSpending(bed.price, `你把钱砸在了 ${bed.name} 上，接下来每一觉都应该比以前值。`);
+  recordSpending(bed.price, `你把钱花在了 ${bed.name} 上，接下来每一觉都会比以前更值。`);
   state.bedType = bedId;
   updateGrowthSummary(`${bed.name} 已就位，从今晚开始，恢复终于更像恢复。`);
   addLog(state, `你把床升级成了${bed.name}，资金 -${bed.price}。`);
@@ -2887,9 +2887,9 @@ function switchJob(jobId) {
     return;
   }
   state.money -= job.switchCost;
-  recordSpending(job.switchCost, `你花 ${job.switchCost} 切换到了 ${job.name}，这是在给未来几天重做风险和收益。`);
+  recordSpending(job.switchCost, `你花 ${job.switchCost} 切换到了 ${job.name}，是在为接下来几天重做节奏和收益。`);
   state.jobType = jobId;
-  updateGrowthSummary(`工作路线切到 ${job.name}，每天的班都会换一种疼法，也换一种赚钱法。`);
+  updateGrowthSummary(`工作路线切到 ${job.name}，每天都会换一种更适合自己的推进节奏。`);
   addLog(state, `你花 ${job.switchCost} 完成了路线切换，当前工作改为 ${job.name}。`);
   openStoreModal();
 }
@@ -2901,7 +2901,7 @@ function purchaseSkill(skillId) {
   }
 
   state.money -= skill.price;
-  recordSpending(skill.price, `你买下了 ${skill.name}，想让后面的牌局更像在赚钱，而不是在受苦。`);
+  recordSpending(skill.price, `你买下了 ${skill.name}，想让后面的牌局更顺、更像在稳稳赚钱。`);
   state.skillPurchases[skillId] = getSkillLevel(skillId) + 1;
   updateGrowthSummary(`${skill.name} 已生效，接下来这条 build 会更像样一点。`);
   addLog(state, `你购买了技能【${skill.name}】，资金 -${skill.price}。`);
@@ -2958,7 +2958,7 @@ function getLogTone(text) {
   if (/达标|超额|财富自由|购买了技能|升级成了|终于结算了|睡到了天亮|偷到|里程碑|锁住工资/.test(text)) {
     return "positive-log";
   }
-  if (/迟到|绷不住|倒下了|罚|熬了|睡眠债|翻车/.test(text)) {
+  if (/时间已经到了|放慢一点|夜间放松|睡眠节奏调整/.test(text)) {
     return "negative-log";
   }
   return "";
@@ -2971,7 +2971,7 @@ function checkEndConditions() {
     state.morning.dozing = false;
     state.stage = "gameover";
     closeModal();
-    addLog(state, "你倒下了。身体表示这班是真上不动了。");
+    addLog(state, "今天先休整一下，补满体力后再轻松出发。");
     return true;
   }
   if (state.stress >= 100) {
@@ -2980,7 +2980,7 @@ function checkEndConditions() {
     state.morning.dozing = false;
     state.stage = "gameover";
     closeModal();
-    addLog(state, "你绷不住了。精神率先在工位上宣布下班。");
+    addLog(state, "今天先放松一下，等心情稳下来再继续推进。");
     return true;
   }
   if (state.money >= MAX_MONEY) {
@@ -2989,7 +2989,7 @@ function checkEndConditions() {
     state.morning.dozing = false;
     state.stage = "victory";
     closeModal();
-    addLog(state, "存款终于到了可以跑路的地步。财富自由达成。");
+    addLog(state, "存款已经攒到位了，新阶段正式开启。");
     return true;
   }
   return false;
