@@ -448,7 +448,6 @@ const ui = {
   sceneDescription: document.querySelector("#scene-description"),
   sceneExtra: document.querySelector("#scene-extra"),
   actionBar: document.querySelector("#action-bar"),
-  intelCard: document.querySelector("#intel-card"),
   inventoryList: document.querySelector("#inventory-list"),
   tipCopy: document.querySelector("#tip-copy"),
   logList: document.querySelector("#log-list"),
@@ -1075,7 +1074,6 @@ function render() {
 
   renderScene();
   renderSceneExtra();
-  renderIntelCard();
   renderActions();
   renderInventory();
   renderLogs();
@@ -1168,35 +1166,6 @@ function renderSceneExtra() {
   }
 
   ui.sceneExtra.innerHTML = "";
-}
-
-function renderIntelCard() {
-  if (!ui.intelCard) {
-    return;
-  }
-
-  ui.intelCard.innerHTML = `
-    <div class="panel-head compact-head">
-      <div>
-        <p class="eyebrow">Today's Intel</p>
-        <h3>今日情报卡</h3>
-      </div>
-    </div>
-    <div class="intel-grid">
-      <article class="modal-section">
-        <strong>今日天气</strong>
-        <p>${state.dailyIntel.weather}</p>
-      </article>
-      <article class="modal-section">
-        <strong>今日运势</strong>
-        <p>${state.dailyIntel.fortune}</p>
-      </article>
-      <article class="modal-section">
-        <strong>随机建议</strong>
-        <p>${state.dailyIntel.advice}</p>
-      </article>
-    </div>
-  `;
 }
 
 function getDisplayedTime() {
@@ -1773,6 +1742,26 @@ function openWorkCardGameModal() {
     : currentExpectedIncome >= JOBS[state.jobType].moneyDelta
       ? "保底工资已锁定"
       : "还没把今天的基础工资捞回来";
+  const remainingScore = Math.max(0, state.working.targetScore - state.working.score);
+  const selectedSummary = selectedCards.length > 0 && preview
+    ? `如果现在出牌，预计工资会来到 ${formatNumber(previewIncome)}。`
+    : selectedCards.length > 0
+      ? "当前选择不成型，可以改成换牌。"
+      : "先选 1-3 张牌，优先把今天的保底工资捞回来。";
+  const compactMeta = [
+    `资金 ${Math.round(state.money)}`,
+    `换牌 ${rerollCost ?? "满"}`,
+    `余牌 ${cardsLeft}`,
+    `超额每分 ${hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT}`,
+  ];
+  const summaryLine = state.working.lastPlayedLabel
+    ? `上一手【${state.working.lastPlayedLabel}】+${state.working.lastPlayedScore}。${progressState}。`
+    : `${progressState}。`;
+  const supportLine = state.dayStats.bestPlayScore > 0
+    ? `今日最佳一手：${state.dayStats.bestPlayLabel} +${formatNumber(state.dayStats.bestPlayScore)}。`
+    : ownedSkills.length
+      ? `已购技能：${ownedSkills.slice(0, 3).join("、")}${ownedSkills.length > 3 ? " 等" : ""}。`
+      : "当前还没有永久技能。";
 
   const handHtml = state.working.hand
     .map((card) => {
@@ -1792,64 +1781,39 @@ function openWorkCardGameModal() {
           <div>
             <p class="eyebrow">Today's Work</p>
             <h3>今日搬砖牌局</h3>
-            <p>4 次出牌全部打完后，会自动结算今天的工作收入。</p>
+            <p>先盯住工资和差距，其他信息都是辅助。</p>
           </div>
           <span class="scene-tag minigame-tag">工作中</span>
         </div>
-        <div class="minigame-stats workgame-stats">
-          <div class="modal-section">
-            <strong>目标分数</strong>
-            <p>${formatScore(state.working.targetScore)}</p>
-          </div>
-          <div class="modal-section">
-            <strong>当前得分</strong>
-            <p>${formatScore(state.working.score)}</p>
-          </div>
-          <div class="modal-section">
-            <strong>当前预计收入</strong>
-            <p>${formatNumber(currentExpectedIncome)}</p>
-          </div>
-          <div class="modal-section">
-            <strong>当前资金</strong>
-            <p>${Math.round(state.money)}</p>
-          </div>
-          <div class="modal-section">
-            <strong>基础工资</strong>
-            <p>${JOBS[state.jobType].moneyDelta}</p>
-          </div>
-          <div class="modal-section">
-            <strong>还差多少分</strong>
-            <p>${formatScore(Math.max(0, state.working.targetScore - state.working.score))}</p>
-          </div>
-          <div class="modal-section">
-            <strong>出牌进度</strong>
-            <p>${state.working.playsUsed} / ${WORK_PLAYS_PER_DAY}</p>
-          </div>
-          <div class="modal-section">
-            <strong>下次换牌价格</strong>
-            <p>${rerollCost ?? "已用完"}</p>
-          </div>
-          <div class="modal-section">
-            <strong>换牌上限</strong>
-            <p>${state.working.rerollsUsed} / ${getWorkRerollLimit()}</p>
-          </div>
-          <div class="modal-section">
-            <strong>牌堆余量</strong>
-            <p>${cardsLeft}</p>
-          </div>
-          <div class="modal-section">
-            <strong>超额部分价值</strong>
-            <p>每 1 分额外值 ${hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT}</p>
-          </div>
+        <div class="workgame-hero">
+          <article class="workgame-focus focus-income">
+            <span class="workgame-focus-label">当前预计收入</span>
+            <strong>${formatNumber(currentExpectedIncome)}</strong>
+            <p>基础工资 ${formatNumber(JOBS[state.jobType].moneyDelta)}</p>
+          </article>
+          <article class="workgame-focus focus-gap">
+            <span class="workgame-focus-label">还差多少分</span>
+            <strong>${formatScore(remainingScore)}</strong>
+            <p>目标 ${formatScore(state.working.targetScore)} / 当前 ${formatScore(state.working.score)}</p>
+          </article>
+          <article class="workgame-focus focus-progress">
+            <span class="workgame-focus-label">出牌进度</span>
+            <strong>${state.working.playsUsed} / ${WORK_PLAYS_PER_DAY}</strong>
+            <p>${progressState}</p>
+          </article>
+        </div>
+        <div class="workgame-substats">
+          <span class="workgame-chip">${compactMeta[0]}</span>
+          <span class="workgame-chip">${compactMeta[1]}</span>
+          <span class="workgame-chip">${compactMeta[2]}</span>
+          <span class="workgame-chip">${compactMeta[3]}</span>
         </div>
         <div class="minigame-stage workgame-stage">
           <div class="workgame-callout">
             <strong>${selectionText}</strong>
-            <p>${state.working.lastPlayedLabel ? `上一手：${state.working.lastPlayedLabel} +${state.working.lastPlayedScore}` : "还没出牌。"} ${progressState}。${state.working.nextPlayBonus > 0 ? ` 下一手额外 +${state.working.nextPlayBonus}。` : ""}</p>
-            <p>${preview ? previewDetail : ""}</p>
-            <p>${ownedSkills.length ? `已购技能：${ownedSkills.slice(0, 5).join("、")}${ownedSkills.length > 5 ? " 等" : ""}` : "当前还没有永久技能。"}</p>
-            <p>${state.dayStats.bestPlayScore > 0 ? `今日最佳一手：${state.dayStats.bestPlayLabel} +${formatNumber(state.dayStats.bestPlayScore)}，大约把工资抬到了 ${formatNumber(state.dayStats.bestPlayIncome)}。` : "今天还没打出能当招牌的一手。"}</p>
-            <p>${selectedCards.length > 0 && rerollCost !== null ? `如果改为换牌，这次至少要多换回 ${formatNumber(Math.ceil(rerollCost / Math.max(1, hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT)))} 分才算回本。` : "先看手牌，不急着为每一手过度花钱。"}</p>
+            <p>${selectedSummary}</p>
+            <p class="workgame-support">${summaryLine}${state.working.nextPlayBonus > 0 ? ` 下一手额外 +${state.working.nextPlayBonus}。` : ""} ${supportLine}</p>
+            ${preview ? `<p class="workgame-detail">${previewDetail}</p>` : ""}
           </div>
           <div class="workgame-hand">${handHtml}</div>
         </div>
