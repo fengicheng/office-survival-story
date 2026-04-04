@@ -224,11 +224,27 @@ h2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.progress-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
 .summary-card {
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.summary-wide {
+  min-height: 110px;
+}
+
+.summary-copy {
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .grid-two {
@@ -334,6 +350,20 @@ h2 {
   line-height: 1.7;
 }
 
+.scene-extra {
+  margin-top: 16px;
+}
+
+.scene-extra-grid,
+.intel-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.scene-extra-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .action-bar,
 .inventory-actions,
 .modal-actions {
@@ -400,6 +430,11 @@ h2 {
   padding: 14px 16px;
 }
 
+.accent-card {
+  background: linear-gradient(180deg, rgba(255, 236, 214, 0.96), rgba(255, 247, 239, 0.98));
+  border-color: rgba(189, 80, 52, 0.16);
+}
+
 .inventory-item strong {
   display: block;
   margin-bottom: 6px;
@@ -423,6 +458,19 @@ h2 {
 
 .skill-card {
   background: linear-gradient(180deg, rgba(255, 248, 239, 0.96), rgba(247, 235, 217, 0.96));
+}
+
+.store-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(189, 80, 52, 0.12);
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .tip-box {
@@ -467,6 +515,18 @@ h2 {
   border-radius: 26px;
   background: #fffaf4;
   box-shadow: 0 30px 80px rgba(24, 15, 10, 0.24);
+}
+
+.intel-card {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 245, 232, 0.95), rgba(248, 237, 219, 0.96));
+  border: 1px solid rgba(189, 80, 52, 0.12);
+}
+
+.compact-head {
+  margin-bottom: 12px;
 }
 
 .modal-card h3,
@@ -597,6 +657,16 @@ h2 {
   line-height: 1;
 }
 
+.positive-log {
+  border-color: rgba(31, 122, 87, 0.2);
+  background: linear-gradient(180deg, rgba(239, 252, 244, 0.96), rgba(255, 255, 255, 0.9));
+}
+
+.negative-log {
+  border-color: rgba(75, 95, 186, 0.18);
+  background: linear-gradient(180deg, rgba(240, 243, 255, 0.95), rgba(255, 255, 255, 0.9));
+}
+
 @media (max-width: 860px) {
   .hero,
   .status-top {
@@ -604,6 +674,7 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .progress-strip,
   .summary-grid,
   .grid-two {
     grid-template-columns: 1fr;
@@ -617,6 +688,10 @@ h2 {
   .minigame-stats,
   .workgame-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scene-extra-grid {
+    grid-template-columns: 1fr;
   }
 
   .workgame-hand {

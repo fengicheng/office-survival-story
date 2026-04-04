@@ -25,6 +25,34 @@ const BASE_WORK_REROLL_LIMIT = 3;
 const WORK_TARGET_GROWTH_MULTIPLIER = 1.2;
 const WORK_EXTRA_INCOME_PER_POINT = 10;
 const BONUS_COMMISSION_EXTRA_INCOME_PER_POINT = 14;
+const WEATHER_POOL = [
+  "晴，阳光很好，但和你没什么关系。",
+  "阴，办公室的光线刚好适合怀疑人生。",
+  "多云，适合把情绪装得和桌面一样平。",
+  "暴雨，迟到听起来终于像个合理借口。",
+  "闷热，今天耐心蒸发得会比平时快。",
+  "大风，外面的自由吹得比工位上的空调更真。",
+  "雷阵雨，适合边听键盘声边脑补世界末日。",
+  "薄雾，今天的目标和人生都不太清晰。",
+];
+const FORTUNE_POOL = [
+  "大凶，今天的班大概率不会轻易放过你。",
+  "凶，适合谨慎保命，不适合过度上头。",
+  "平，正常发挥就已经很不容易。",
+  "小吉，今天也许不至于白上。",
+  "中吉，最后关头可能有机会把班补回来。",
+  "大吉，适合搏一把高分，手气可能站你这边。",
+];
+const ADVICE_POOL = [
+  "先把保底工资锁住，再考虑冲奖金区。",
+  "如果前两手一般，留点资源给第 4 手收尾。",
+  "换牌成本不低，前两手别太上头。",
+  "状态一般时，保住基础工资比硬冲更值。",
+  "今天若起手顺，可以大胆把高倍率牌型做大。",
+  "别急着证明自己，先让今天别白上。",
+  "如果已经达标，就开始盯着超额区的奖金。",
+  "道具和床都在替你兜底，别把每一手都打成绝命局。",
+];
 const SKILLS = {
   pairTraining: {
     id: "pairTraining",
@@ -408,11 +436,19 @@ const ui = {
   bedValue: document.querySelector("#bed-value"),
   jobValue: document.querySelector("#job-value"),
   sleepBuffValue: document.querySelector("#sleep-buff-value"),
+  goalValue: document.querySelector("#goal-value"),
+  goalCopy: document.querySelector("#goal-copy"),
+  dayProgressValue: document.querySelector("#day-progress-value"),
+  dayProgressCopy: document.querySelector("#day-progress-copy"),
+  buildValue: document.querySelector("#build-value"),
+  buildCopy: document.querySelector("#build-copy"),
   sceneTitle: document.querySelector("#scene-title"),
   sceneTag: document.querySelector("#scene-tag"),
   sceneVisual: document.querySelector("#scene-visual"),
   sceneDescription: document.querySelector("#scene-description"),
+  sceneExtra: document.querySelector("#scene-extra"),
   actionBar: document.querySelector("#action-bar"),
+  intelCard: document.querySelector("#intel-card"),
   inventoryList: document.querySelector("#inventory-list"),
   tipCopy: document.querySelector("#tip-copy"),
   logList: document.querySelector("#log-list"),
@@ -544,6 +580,31 @@ function updateMusicButton(overrideLabel) {
   ui.musicToggleBtn.textContent = "音乐准备中";
 }
 
+function pickRandom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function generateDailyIntel() {
+  return {
+    weather: pickRandom(WEATHER_POOL),
+    fortune: pickRandom(FORTUNE_POOL),
+    advice: pickRandom(ADVICE_POOL),
+  };
+}
+
+function createEmptyDayStats(day = 1) {
+  return {
+    day,
+    income: 0,
+    spending: 0,
+    bestPlayScore: 0,
+    bestPlayLabel: "",
+    bestPlayIncome: 0,
+    keyMoment: "今天刚刚开始，先想办法别白上班。",
+    growth: "今天还没买到能明显改变体感的东西。",
+  };
+}
+
 function createInitialState() {
   const freshState = {
     day: 1,
@@ -595,6 +656,9 @@ function createInitialState() {
       nextPlayBonus: 0,
       rerollDiscountRemaining: 0,
     },
+    dailyIntel: generateDailyIntel(),
+    dayStats: createEmptyDayStats(1),
+    lastDayReport: null,
     log: [],
   };
 
@@ -621,6 +685,16 @@ function withDefaults(candidate) {
     ...initial,
     ...candidate,
     workTargetScore: round2(candidate.workTargetScore ?? initial.workTargetScore),
+    dailyIntel: {
+      ...initial.dailyIntel,
+      ...(candidate.dailyIntel ?? generateDailyIntel()),
+    },
+    dayStats: {
+      ...initial.dayStats,
+      ...(candidate.dayStats ?? createEmptyDayStats(candidate.day ?? initial.day)),
+      day: candidate.day ?? initial.day,
+    },
+    lastDayReport: candidate.lastDayReport ?? null,
     skillPurchases: {
       ...initial.skillPurchases,
       ...(candidate.skillPurchases ?? {}),
@@ -728,6 +802,240 @@ function getOwnedSkillSummary() {
     .filter(Boolean);
 }
 
+function recordIncome(amount, reason) {
+  if (amount <= 0) {
+    return;
+  }
+  state.dayStats.income = round2((state.dayStats.income ?? 0) + amount);
+  if (reason) {
+    state.dayStats.keyMoment = reason;
+  }
+}
+
+function recordSpending(amount, reason) {
+  if (amount <= 0) {
+    return;
+  }
+  state.dayStats.spending = round2((state.dayStats.spending ?? 0) + amount);
+  if (reason) {
+    state.dayStats.keyMoment = reason;
+  }
+}
+
+function updateGrowthSummary(summary) {
+  if (!summary) {
+    return;
+  }
+  state.dayStats.growth = summary;
+}
+
+function updateBestPlay(label, score, income) {
+  if (score <= (state.dayStats.bestPlayScore ?? 0)) {
+    return;
+  }
+  state.dayStats.bestPlayScore = round2(score);
+  state.dayStats.bestPlayLabel = label;
+  state.dayStats.bestPlayIncome = round2(income);
+}
+
+function getDayNetIncome() {
+  return round2((state.dayStats.income ?? 0) - (state.dayStats.spending ?? 0));
+}
+
+function buildDailyReportSnapshot() {
+  const goal = getNextGoal();
+  return {
+    day: state.dayStats.day ?? state.day,
+    income: round2(state.dayStats.income ?? 0),
+    spending: round2(state.dayStats.spending ?? 0),
+    net: getDayNetIncome(),
+    bestPlayLabel: state.dayStats.bestPlayLabel || "今天还没打出像样的一手",
+    bestPlayScore: round2(state.dayStats.bestPlayScore ?? 0),
+    bestPlayIncome: round2(state.dayStats.bestPlayIncome ?? 0),
+    keyMoment: state.dayStats.keyMoment,
+    growth: state.dayStats.growth,
+    goalLabel: goal.title,
+    goalCopy: goal.copy,
+    money: round2(state.money),
+  };
+}
+
+function startNewDayState() {
+  state.dayStats = createEmptyDayStats(state.day);
+  state.dailyIntel = generateDailyIntel();
+}
+
+function getProjectedWorkIncome(score) {
+  const job = JOBS[state.jobType];
+  const targetScore = state.working.targetScore || state.workTargetScore;
+  const effectiveScore = round2(score);
+  if (effectiveScore >= targetScore) {
+    const extraIncomePerPoint = hasSkill("bonusCommission")
+      ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT
+      : WORK_EXTRA_INCOME_PER_POINT;
+    return round2(job.moneyDelta + Math.max(0, effectiveScore - targetScore) * extraIncomePerPoint);
+  }
+  return targetScore > 0 ? round2((effectiveScore / targetScore) * job.moneyDelta) : 0;
+}
+
+function getProjectedExtraIncome(score) {
+  const job = JOBS[state.jobType];
+  return round2(getProjectedWorkIncome(score) - job.moneyDelta);
+}
+
+function getBuildSummary() {
+  const summaries = [];
+  if (hasSkill("burnoutExpertise") || getSkillLevel("tripleDrill") > 0 || hasSkill("performanceSprint")) {
+    summaries.push({
+      title: "三条爆发流",
+      copy: "你的收益更容易在高爆发手和收尾时段突然抬头。",
+      weight: 3,
+    });
+  }
+  if (hasSkill("processMastery") || getSkillLevel("straightDrill") > 0 || getSkillLevel("handPlanning") > 0) {
+    summaries.push({
+      title: "换牌运营流",
+      copy: "你更依赖运营手牌，把资源留给成型时刻。",
+      weight: 2,
+    });
+  }
+  if (hasSkill("pairTraining") || getSkillLevel("pairDrill") > 0 || hasSkill("safetyPlan") || hasSkill("basicTraining")) {
+    summaries.push({
+      title: "稳定保底流",
+      copy: "你更擅长把每天的班稳稳落袋，不轻易白上。",
+      weight: 2,
+    });
+  }
+  if (hasSkill("soloOperator") || getSkillLevel("singleTraining") > 0) {
+    summaries.push({
+      title: "单张保命流",
+      copy: "手气差的时候也能靠保底拆法慢慢苟住工资。",
+      weight: 1,
+    });
+  }
+
+  if (summaries.length === 0) {
+    return {
+      title: state.bedType === "wood" ? "白板社畜流" : "生存改善流",
+      copy: state.bedType === "wood"
+        ? "目前还没成型，先攒第一笔能明显改善体感的钱。"
+        : "床先升级了，接下来该让工作结算也跟着变好看。",
+    };
+  }
+
+  summaries.sort((left, right) => right.weight - left.weight);
+  return {
+    title: summaries[0].title,
+    copy: summaries[0].copy,
+  };
+}
+
+function getNextGoal() {
+  const options = [];
+
+  Object.values(BEDS)
+    .filter((bed) => bed.price > 0 && state.bedType !== bed.id)
+    .forEach((bed) => {
+      options.push({
+        price: bed.price,
+        title: bed.name,
+        copy: `买下后，夜里和回笼觉都会明显更像在恢复，不像在硬挺。`,
+      });
+    });
+
+  Object.values(JOBS)
+    .filter((job) => job.switchCost && state.jobType !== job.id)
+    .forEach((job) => {
+      options.push({
+        price: job.switchCost,
+        title: job.name,
+        copy: `换路线之后，每天的风险和赚钱节奏都会立刻改一档。`,
+      });
+    });
+
+  STORE_SKILL_ORDER
+    .map((skillId) => SKILLS[skillId])
+    .filter((skill) => getSkillLevel(skill.id) < skill.maxPurchases)
+    .forEach((skill) => {
+      options.push({
+        price: skill.price,
+        title: skill.name,
+        copy: `${skill.summary}，买完后你的牌局会更容易把分数换成工资。`,
+      });
+    });
+
+  Object.values(ITEMS).forEach((item) => {
+    options.push({
+      price: item.price,
+      title: item.name,
+      copy: `${item.description} 这种小件适合在危险日子里救命。`,
+    });
+  });
+
+  const locked = options
+    .filter((option) => option.price > state.money)
+    .sort((left, right) => (left.price - state.money) - (right.price - state.money));
+
+  if (locked.length === 0) {
+    return {
+      title: "钱已经够花一笔了",
+      copy: "现在最重要的不是攒着，而是把钱换成更稳的明天。",
+      delta: 0,
+    };
+  }
+
+  const next = locked[0];
+  return {
+    ...next,
+    delta: Math.max(0, round2(next.price - state.money)),
+  };
+}
+
+function getItemUseCase(item) {
+  const useCases = {
+    energyDrink: "适合早晨抢救或夜里保命。",
+    stressCube: "适合在压力快爆时拉一把。",
+    sleepPill: "适合准备狠狠干回一觉的时候。",
+  };
+  return useCases[item.id] ?? "适合在危险节点给自己留条后路。";
+}
+
+function getBedImmediateImpact(bed) {
+  const baseSleepHours = 8;
+  return `今晚睡满 8 小时，大约比木板床多回精力 +${formatNumber((bed.nightEnergyPerHour - BEDS.wood.nightEnergyPerHour) * baseSleepHours)}，压力额外 -${formatNumber((bed.nightStressPerHour - BEDS.wood.nightStressPerHour) * baseSleepHours)}。`;
+}
+
+function getSkillImpact(skill) {
+  const impactBySkill = {
+    burnoutExpertise: "最适合三条爆发，成型时常能多抬一大截工资。",
+    processMastery: "顺子成型时更值钱，适合运营手牌。",
+    soloOperator: "烂手也能有保底，但对子会更难看。",
+    performanceSprint: "第 4 手翻盘时最有存在感。",
+    safetyPlan: "卡线日子更稳，不容易白上。",
+    bonusCommission: "超额区开始真正值钱，适合冲高分。",
+  };
+  return impactBySkill[skill.id] ?? `${skill.summary}，典型会把每天的分数更顺地换成钱。`;
+}
+
+function getStoreRecommendation(kind, id) {
+  if (kind === "bed" && state.bedType === "wood" && id === "spring") {
+    return "当前最值";
+  }
+  if (kind === "skill" && (id === "basicTraining" || id === "safetyPlan") && state.money >= SKILLS[id].price) {
+    return "适合保命";
+  }
+  if (kind === "skill" && (id === "bonusCommission" || id === "performanceSprint")) {
+    return "适合冲钱";
+  }
+  if (kind === "item" && id === "energyDrink") {
+    return "适合救命";
+  }
+  if (kind === "item" && id === "sleepPill") {
+    return "适合过夜";
+  }
+  return "";
+}
+
 function saveState() {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -737,6 +1045,9 @@ function render() {
 
   const bed = BEDS[state.bedType];
   const job = JOBS[state.jobType];
+  const goal = getNextGoal();
+  const build = getBuildSummary();
+  const netIncome = getDayNetIncome();
   const displayedEnergy = getDisplayedEnergy();
   const displayedStress = getDisplayedStress();
   const energyPercent = (displayedEnergy / state.energyMax) * 100;
@@ -753,8 +1064,18 @@ function render() {
   ui.bedValue.textContent = bed.name;
   ui.jobValue.textContent = job.name;
   ui.sleepBuffValue.textContent = `x${state.sleepBuff.toFixed(1)}`;
+  ui.goalValue.textContent = goal.delta > 0 ? `还差 ${formatNumber(goal.delta)} 可买 ${goal.title}` : goal.title;
+  ui.goalCopy.textContent = goal.copy;
+  ui.dayProgressValue.textContent = `收入 ${formatNumber(state.dayStats.income ?? 0)} / 消费 ${formatNumber(state.dayStats.spending ?? 0)} / 净收益 ${formatSigned(netIncome)}`;
+  ui.dayProgressCopy.textContent = netIncome >= 0
+    ? "今天至少不是白忙，接下来要把这些钱换成更稳的循环。"
+    : "今天花得比赚得多，接下来得让下一段收益追上来。";
+  ui.buildValue.textContent = build.title;
+  ui.buildCopy.textContent = build.copy;
 
   renderScene();
+  renderSceneExtra();
+  renderIntelCard();
   renderActions();
   renderInventory();
   renderLogs();
@@ -770,24 +1091,123 @@ function renderScene() {
   ui.sceneVisual.innerHTML = `<p class="visual-copy">${scene.visualCopy}</p>`;
 }
 
-function getDisplayedTime() {
-  if (state.stage === "morning" && state.morning.dozing) {
-    return state.morning.lastCheckedTime ?? MORNING_START;
+function renderSceneExtra() {
+  if (!ui.sceneExtra) {
+    return;
   }
+
+  if (state.stage === "morning" && state.morning.dozing) {
+    const risk = getDozeRiskInfo(state.currentTime);
+    ui.sceneExtra.innerHTML = `
+      <div class="scene-extra-grid">
+        <article class="modal-section accent-card">
+          <strong>回笼觉收益</strong>
+          <p>已睡 ${formatNumber(Math.max(0, state.currentTime - state.morning.startTime))} 分钟，偷到精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
+        </article>
+        <article class="modal-section">
+          <strong>当前风险</strong>
+          <p>${risk.label}。${risk.copy}</p>
+        </article>
+        <article class="modal-section">
+          <strong>床铺收益</strong>
+          <p>${BEDS[state.bedType].name} 每 10 分钟大约给你精力 +${formatNumber(BEDS[state.bedType].morningEnergyPerMinute * 10)}，压力 -${formatNumber(BEDS[state.bedType].morningStressPerMinute * 10)}。</p>
+        </article>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.stage === "working" && state.working.phase === "idle") {
+    const job = JOBS[state.jobType];
+    ui.sceneExtra.innerHTML = `
+      <div class="scene-extra-grid">
+        <article class="modal-section accent-card">
+          <strong>今日赚钱预期</strong>
+          <p>基础工资 ${formatNumber(job.moneyDelta)}，目标分数 ${formatScore(state.workTargetScore)}。达标就锁住工资，超额部分每 1 分额外值 ${hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT}。</p>
+        </article>
+        <article class="modal-section">
+          <strong>今日天气</strong>
+          <p>${state.dailyIntel.weather}</p>
+        </article>
+        <article class="modal-section">
+          <strong>今日运势</strong>
+          <p>${state.dailyIntel.fortune}</p>
+        </article>
+        <article class="modal-section">
+          <strong>随机建议</strong>
+          <p>${state.dailyIntel.advice}</p>
+        </article>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.stage === "night") {
+    const sleepHours = calculateSleepHoursUntilMorning(state.currentTime);
+    const bed = BEDS[state.bedType];
+    const predictedEnergy = bed.nightEnergyPerHour * sleepHours * state.sleepBuff;
+    const predictedStress = bed.nightStressPerHour * sleepHours * state.sleepBuff;
+    const debtHours = Math.max(0, 8 - sleepHours);
+    ui.sceneExtra.innerHTML = `
+      <div class="scene-extra-grid">
+        <article class="modal-section accent-card">
+          <strong>现在睡的收益</strong>
+          <p>如果现在躺下，能回精力 +${formatNumber(predictedEnergy)}，降压力 -${formatNumber(predictedStress)}。</p>
+        </article>
+        <article class="modal-section">
+          <strong>继续熬 1 小时</strong>
+          <p>短期会减压，但明早更容易背上睡眠债${debtHours > 0 ? `，而且已经少睡 ${debtHours} 小时。` : "。"} </p>
+        </article>
+        <article class="modal-section">
+          <strong>床铺加成</strong>
+          <p>${bed.name} 这次比木板床多给你精力 +${formatNumber((bed.nightEnergyPerHour - BEDS.wood.nightEnergyPerHour) * sleepHours)}，压力额外 -${formatNumber((bed.nightStressPerHour - BEDS.wood.nightStressPerHour) * sleepHours)}。</p>
+        </article>
+      </div>
+    `;
+    return;
+  }
+
+  ui.sceneExtra.innerHTML = "";
+}
+
+function renderIntelCard() {
+  if (!ui.intelCard) {
+    return;
+  }
+
+  ui.intelCard.innerHTML = `
+    <div class="panel-head compact-head">
+      <div>
+        <p class="eyebrow">Today's Intel</p>
+        <h3>今日情报卡</h3>
+      </div>
+    </div>
+    <div class="intel-grid">
+      <article class="modal-section">
+        <strong>今日天气</strong>
+        <p>${state.dailyIntel.weather}</p>
+      </article>
+      <article class="modal-section">
+        <strong>今日运势</strong>
+        <p>${state.dailyIntel.fortune}</p>
+      </article>
+      <article class="modal-section">
+        <strong>随机建议</strong>
+        <p>${state.dailyIntel.advice}</p>
+      </article>
+    </div>
+  `;
+}
+
+function getDisplayedTime() {
   return state.currentTime;
 }
 
 function getDisplayedEnergy() {
-  if (state.stage === "morning" && state.morning.dozing) {
-    return state.morning.lastCheckedEnergy ?? state.energy;
-  }
   return state.energy;
 }
 
 function getDisplayedStress() {
-  if (state.stage === "morning" && state.morning.dozing) {
-    return state.morning.lastCheckedStress ?? state.stress;
-  }
   return state.stress;
 }
 
@@ -1004,7 +1424,7 @@ function renderLogs() {
   ui.logList.innerHTML = "";
   state.log.slice(0, 12).forEach((entry) => {
     const item = document.createElement("article");
-    item.className = "log-entry";
+    item.className = `log-entry ${getLogTone(entry.text)}`;
     item.innerHTML = `<time>${entry.stamp}</time><span>${entry.text}</span>`;
     ui.logList.appendChild(item);
   });
@@ -1016,6 +1436,8 @@ function purchaseItem(itemId) {
     return;
   }
   state.money -= item.price;
+  recordSpending(item.price, `你先花了 ${item.price} 买下 ${item.name}，想给今天多留一点兜底空间。`);
+  updateGrowthSummary(`${item.name} 已入手，关键时刻至少不会只能硬扛。`);
   state.inventory[item.id] += 1;
   addLog(state, `买入 ${item.name}，资金 -${item.price}。`);
   render();
@@ -1024,10 +1446,14 @@ function purchaseItem(itemId) {
 function transitionToWork() {
   stopDozing();
   closeModal();
+  const hadDozeBenefit = state.morning.recoveredEnergy > 0 || state.morning.reducedStress > 0;
   state.stage = "working";
   state.currentTime = WORK_START;
   state.morning.dozing = false;
   resetWorkingState();
+  if (hadDozeBenefit) {
+    state.dayStats.keyMoment = `你带着回笼觉偷来的精力 +${formatNumber(state.morning.recoveredEnergy)}、压力 -${formatNumber(state.morning.reducedStress)} 去上班了。`;
+  }
   addLog(state, "你挣扎着爬起来，准备去公司打卡。");
   render();
 }
@@ -1272,6 +1698,15 @@ function playWorkCardHand() {
   state.working.lastPlayedLabel = result.label;
   state.working.lastPlayedScore = result.score;
   state.working.nextPlayBonus = 0;
+  const projectedIncome = getProjectedWorkIncome(state.working.score);
+  updateBestPlay(result.label, result.score, projectedIncome);
+  if (state.working.score >= state.working.targetScore && state.working.score - result.score < state.working.targetScore) {
+    state.dayStats.keyMoment = `你靠第 ${state.working.playsUsed} 手【${result.label}】把保底工资锁住了。`;
+  } else if (state.working.playsUsed === WORK_PLAYS_PER_DAY && state.working.score >= state.working.targetScore) {
+    state.dayStats.keyMoment = `最后一手【${result.label}】把今天抬进了可交代的区间。`;
+  } else if (result.score >= (state.dayStats.bestPlayScore ?? 0)) {
+    state.dayStats.keyMoment = `今天目前最值的一手是【${result.label}】，一下子把预计工资顶到了 ${formatNumber(projectedIncome)}。`;
+  }
   addLog(
     state,
     `第 ${state.working.playsUsed} 手打出【${result.label}】，基础 ${result.baseScore}，最终 ${result.score}。`,
@@ -1298,6 +1733,7 @@ function rerollWorkCards() {
   }
 
   state.money -= cost;
+  recordSpending(cost, `你花了 ${cost} 资金换牌，赌的是后面能把这笔钱再挣回来。`);
   consumeWorkRerollDiscount();
   replaceSelectedCardsInHand();
   state.working.selectedCardIds = [];
@@ -1317,6 +1753,9 @@ function openWorkCardGameModal() {
 
   const selectedCards = getSelectedWorkCards();
   const preview = evaluateWorkCards(selectedCards);
+  const previewScore = preview ? round2(state.working.score + preview.score) : state.working.score;
+  const previewIncome = getProjectedWorkIncome(previewScore);
+  const currentExpectedIncome = getProjectedWorkIncome(state.working.score);
   const rerollCost = getWorkRerollCost();
   const cardsLeft = state.working.deck.length;
   const canReroll = selectedCards.length > 0 && rerollCost !== null && state.money >= rerollCost;
@@ -1324,11 +1763,16 @@ function openWorkCardGameModal() {
   const selectionText = selectedCards.length === 0
     ? "选择 1-3 张牌出牌，或选中任意张牌花钱换牌。"
     : preview
-      ? `当前组合：${preview.label}，本次出牌可得 ${preview.score} 分。`
+      ? `当前组合：${preview.label}，本次出牌可得 ${preview.score} 分，预计工资会来到 ${formatNumber(previewIncome)}。`
       : "当前选择无法组成合法牌型，可以改为换牌。";
   const previewDetail = preview?.notes?.length
-    ? `本次生效：${preview.notes.join("、")}。`
+    ? `本次生效：${preview.notes.join("、")}。基础 ${preview.baseScore}，平加成 +${preview.flatBonus}，倍率 x${preview.multiplier.toFixed(2)}。`
     : "本次没有额外技能修正。";
+  const progressState = state.working.score >= state.working.targetScore
+    ? "开始冲奖金区"
+    : currentExpectedIncome >= JOBS[state.jobType].moneyDelta
+      ? "保底工资已锁定"
+      : "还没把今天的基础工资捞回来";
 
   const handHtml = state.working.hand
     .map((card) => {
@@ -1362,11 +1806,15 @@ function openWorkCardGameModal() {
             <p>${formatScore(state.working.score)}</p>
           </div>
           <div class="modal-section">
+            <strong>当前预计收入</strong>
+            <p>${formatNumber(currentExpectedIncome)}</p>
+          </div>
+          <div class="modal-section">
             <strong>当前资金</strong>
             <p>${Math.round(state.money)}</p>
           </div>
           <div class="modal-section">
-            <strong>当前工作收益</strong>
+            <strong>基础工资</strong>
             <p>${JOBS[state.jobType].moneyDelta}</p>
           </div>
           <div class="modal-section">
@@ -1389,13 +1837,19 @@ function openWorkCardGameModal() {
             <strong>牌堆余量</strong>
             <p>${cardsLeft}</p>
           </div>
+          <div class="modal-section">
+            <strong>超额部分价值</strong>
+            <p>每 1 分额外值 ${hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT}</p>
+          </div>
         </div>
         <div class="minigame-stage workgame-stage">
           <div class="workgame-callout">
             <strong>${selectionText}</strong>
-            <p>${state.working.lastPlayedLabel ? `上一手：${state.working.lastPlayedLabel} +${state.working.lastPlayedScore}` : "还没出牌。"}${state.working.score >= state.working.targetScore ? " 当前已达标。" : ""}${state.working.nextPlayBonus > 0 ? ` 下一手额外 +${state.working.nextPlayBonus}。` : ""}</p>
+            <p>${state.working.lastPlayedLabel ? `上一手：${state.working.lastPlayedLabel} +${state.working.lastPlayedScore}` : "还没出牌。"} ${progressState}。${state.working.nextPlayBonus > 0 ? ` 下一手额外 +${state.working.nextPlayBonus}。` : ""}</p>
             <p>${preview ? previewDetail : ""}</p>
             <p>${ownedSkills.length ? `已购技能：${ownedSkills.slice(0, 5).join("、")}${ownedSkills.length > 5 ? " 等" : ""}` : "当前还没有永久技能。"}</p>
+            <p>${state.dayStats.bestPlayScore > 0 ? `今日最佳一手：${state.dayStats.bestPlayLabel} +${formatNumber(state.dayStats.bestPlayScore)}，大约把工资抬到了 ${formatNumber(state.dayStats.bestPlayIncome)}。` : "今天还没打出能当招牌的一手。"}</p>
+            <p>${selectedCards.length > 0 && rerollCost !== null ? `如果改为换牌，这次至少要多换回 ${formatNumber(Math.ceil(rerollCost / Math.max(1, hasSkill("bonusCommission") ? BONUS_COMMISSION_EXTRA_INCOME_PER_POINT : WORK_EXTRA_INCOME_PER_POINT)))} 分才算回本。` : "先看手牌，不急着为每一手过度花钱。"}</p>
           </div>
           <div class="workgame-hand">${handHtml}</div>
         </div>
@@ -1436,7 +1890,16 @@ function finishWorkCardGame() {
   const progressIncome = targetScore > 0 ? round2((settlementScore / targetScore) * job.moneyDelta) : 0;
   const finalIncome = reachedTarget ? round2(job.moneyDelta + extraIncome) : progressIncome;
   const nextTargetScore = reachedTarget ? round2(targetScore * WORK_TARGET_GROWTH_MULTIPLIER) : targetScore;
-  const resultLabel = reachedTarget ? (settlementScore > targetScore ? "超额达标" : "达标") : "未达标";
+  let resultLabel = "未达标";
+  if (reachedTarget && settlementScore === targetScore) {
+    resultLabel = "勉强达标";
+  } else if (reachedTarget && settlementScore > targetScore && settlementScore <= targetScore * 1.2) {
+    resultLabel = "稳定达标";
+  } else if (reachedTarget && settlementScore > targetScore * 1.2 && settlementScore <= targetScore * 1.5) {
+    resultLabel = "超额达标";
+  } else if (reachedTarget && settlementScore > targetScore * 1.5) {
+    resultLabel = "爆单日";
+  }
 
   state.working.phase = "result";
   state.working.selectedCardIds = [];
@@ -1450,6 +1913,9 @@ function finishWorkCardGame() {
     state,
     `今日工作${resultLabel}，结算得分 ${formatScore(settlementScore)}/${formatScore(targetScore)}，今日收入 ${formatNumber(finalIncome)}。`,
   );
+  state.dayStats.keyMoment = reachedTarget
+    ? `今天工作${resultLabel}，你把日收入稳稳结到了 ${formatNumber(finalIncome)}。`
+    : `今天没达标，但至少还结回了 ${formatNumber(finalIncome)}，不算彻底白上。`;
 
   render();
   showWorkCardResult();
@@ -1468,6 +1934,16 @@ function showWorkCardResult() {
       <div class="modal-card minigame-card workgame-card">
         <p class="eyebrow">Work Result</p>
         <h3>${state.working.resultLabel}</h3>
+        <div class="modal-grid">
+          <div class="modal-section accent-card">
+            <strong>今日最终收入</strong>
+            <p>+${formatNumber(state.working.finalIncome)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>今日值不值</strong>
+            <p>这班至少换回了钱，接下来要看它值不值得你今天掉的那点命。</p>
+          </div>
+        </div>
         <div class="modal-grid">
           <div class="modal-section">
             <strong>今日目标分数</strong>
@@ -1492,12 +1968,20 @@ function showWorkCardResult() {
         </div>
         <div class="modal-grid">
           <div class="modal-section">
-            <strong>今日最终收入</strong>
-            <p>${formatNumber(state.working.finalIncome)}</p>
-          </div>
-          <div class="modal-section">
             <strong>明日目标分数</strong>
             <p>${formatScore(state.working.nextTargetScore)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>今日值不值总结</strong>
+            <p>接下来结算后会变成：精力 ${formatSigned(job.energyDelta)}，压力 +${formatNumber(job.stressDelta)}，净资产 +${formatNumber(state.working.finalIncome)}。</p>
+          </div>
+          <div class="modal-section">
+            <strong>最佳一手</strong>
+            <p>${state.dayStats.bestPlayLabel ? `${state.dayStats.bestPlayLabel} +${formatNumber(state.dayStats.bestPlayScore)}` : "今天还没有像样的一手。"}</p>
+          </div>
+          <div class="modal-section">
+            <strong>一句日报</strong>
+            <p>${state.dayStats.keyMoment}</p>
           </div>
         </div>
         <div class="modal-actions">
@@ -1695,6 +2179,8 @@ function beginDozing(isResume) {
       forceWake();
       return;
     }
+
+    render();
   }, DOZE_TICK_MS);
 }
 
@@ -1716,6 +2202,31 @@ function getMorningSpeed(currentTime) {
     return 2;
   }
   return 3;
+}
+
+function getDozeRiskInfo(currentTime) {
+  if (currentTime < 7 * 60 + 50) {
+    return {
+      label: "安全",
+      copy: "现在起床依旧很稳，这段时间的收益最像白捡。",
+    };
+  }
+  if (currentTime < 8 * 60 + 10) {
+    return {
+      label: "紧张",
+      copy: "继续睡还能赚，但你已经开始拿通勤时间做交换。",
+    };
+  }
+  if (currentTime < 8 * 60 + 25) {
+    return {
+      label: "危险",
+      copy: "后面每几分钟都在逼你用全勤和罚款对赌。",
+    };
+  }
+  return {
+    label: "极限",
+    copy: "现在再赌，就是把今天的班直接押上去。",
+  };
 }
 
 function openPhoneModal() {
@@ -1740,19 +2251,32 @@ function openPhoneModal() {
     return;
   }
 
+  const risk = getDozeRiskInfo(state.currentTime);
   const body = `
     <div class="modal-card">
       <h3>手机亮起来了</h3>
       <p>现在是 <strong>${formatTime(state.currentTime)}</strong>。你盯着时间犹豫了一下，决定是马上起床，还是继续赌后面的几分钟。</p>
       <div class="modal-grid">
         <div class="modal-section">
+          <strong>本次累计收益</strong>
+          <p>到现在为止，你已经偷到精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
+        </div>
+        <div class="modal-section">
+          <strong>现在起床</strong>
+          <p>你可以直接带着这些收益去上班，至少今天不是纯亏。</p>
+        </div>
+        <div class="modal-section">
+          <strong>继续睡的风险</strong>
+          <p>${risk.label}。${risk.copy}</p>
+        </div>
+        <div class="modal-section">
           <strong>查看手机代价</strong>
           <p>本次查看让你压力 +2，并顺手浪费了 3 分钟。</p>
         </div>
       </div>
       <div class="modal-actions">
-        <button id="continue-dozing" class="modal-btn">继续睡觉</button>
-        <button id="wake-up-now" class="modal-btn secondary">起床上班</button>
+        <button id="continue-dozing" class="modal-btn">继续赌 5 分钟</button>
+        <button id="wake-up-now" class="modal-btn secondary">带着收益起床</button>
       </div>
     </div>
   `;
@@ -1781,6 +2305,7 @@ function forceWake() {
     state,
     `你一睁眼发现已经迟到了。精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。`,
   );
+  state.dayStats.keyMoment = `回笼觉翻车了：虽然偷到精力 +${formatNumber(state.morning.recoveredEnergy)}、压力 -${formatNumber(state.morning.reducedStress)}，但迟到还是狠狠干了你一脚。`;
 
   if (finalizeAfterEndCheck()) {
     return;
@@ -1795,8 +2320,16 @@ function forceWake() {
         <p>时间已经到 <strong>08:30</strong>。你是被现实一把掀下床的，今天迟到已经板上钉钉。</p>
         <div class="modal-grid">
           <div class="modal-section">
-            <strong>本次惩罚</strong>
+            <strong>刚才偷到的收益</strong>
+            <p>精力 +${formatNumber(state.morning.recoveredEnergy)}，压力 -${formatNumber(state.morning.reducedStress)}。</p>
+          </div>
+          <div class="modal-section">
+            <strong>迟到惩罚</strong>
             <p>精力 ${formatSigned(delta.energy)}，压力 ${formatSigned(delta.stress)}，资金 ${formatSigned(delta.money)}。</p>
+          </div>
+          <div class="modal-section">
+            <strong>最终净结果</strong>
+            <p>你并不是一无所获，但这笔收益已经被迟到罚款和精神伤害硬生生啃掉一大块。</p>
           </div>
         </div>
         <div class="modal-actions">
@@ -1821,6 +2354,8 @@ function openSleepModal() {
   const predictedEnergy = bed.nightEnergyPerHour * sleepHours * state.sleepBuff;
   const predictedStress = bed.nightStressPerHour * sleepHours * state.sleepBuff;
   const debtHours = Math.max(0, 8 - sleepHours);
+  const compareEnergy = (bed.nightEnergyPerHour - BEDS.wood.nightEnergyPerHour) * sleepHours * state.sleepBuff;
+  const compareStress = (bed.nightStressPerHour - BEDS.wood.nightStressPerHour) * sleepHours * state.sleepBuff;
 
   const body = `
     <div class="modal-card">
@@ -1834,6 +2369,14 @@ function openSleepModal() {
         <div class="modal-section">
           <strong>睡眠债</strong>
           <p>${debtHours > 0 ? `本次少睡 ${debtHours} 小时，明天精力上限会下降，起始压力也会上升。` : "这是一觉标准的 8 小时睡眠，没有额外惩罚。"}</p>
+        </div>
+        <div class="modal-section">
+          <strong>床铺加成</strong>
+          <p>${bed.name} 这次比木板床多给你精力 +${formatNumber(compareEnergy)}，压力额外 -${formatNumber(compareStress)}。</p>
+        </div>
+        <div class="modal-section">
+          <strong>现在睡 / 继续熬</strong>
+          <p>现在睡是把今天剩下的命往回拉；继续熬 1 小时只能暂时减压，明早会更像报应。</p>
         </div>
       </div>
       <div class="modal-actions">
@@ -1851,6 +2394,7 @@ function openSleepModal() {
 
 function sleepUntilMorning() {
   closeModal();
+  const completedDay = buildDailyReportSnapshot();
   const sleepHours = calculateSleepHoursUntilMorning(state.currentTime);
   const bed = BEDS[state.bedType];
   const energyGain = bed.nightEnergyPerHour * sleepHours * state.sleepBuff;
@@ -1872,6 +2416,16 @@ function sleepUntilMorning() {
   state.morning.lastCheckedEnergy = state.energy;
   state.morning.lastCheckedStress = state.stress;
   state.night.stayedUpHours = 0;
+  state.lastDayReport = {
+    ...completedDay,
+    sleepEnergy: round2(delta.energy),
+    sleepStress: round2(delta.stress),
+    sleepDebtHours: debtHours,
+    sleepCopy: debtHours > 0
+      ? `你把人睡回来了点，但睡眠债还是在后面追。`
+      : `这一觉终于像样，明天起床至少不会只剩工号。`,
+  };
+  startNewDayState();
 
   addLog(
     state,
@@ -1882,6 +2436,7 @@ function sleepUntilMorning() {
     return;
   }
   render();
+  openDailyReportModal();
 }
 
 function applySleepDebt(debtHours) {
@@ -1919,6 +2474,7 @@ function stayUpOneHour() {
   }
 
   if (isMorningAfterOvernight()) {
+    const completedDay = buildDailyReportSnapshot();
     state.currentTime = MORNING_START;
     applySleepDebt(8);
     state.stage = "morning";
@@ -1926,6 +2482,14 @@ function stayUpOneHour() {
     state.morning.lastCheckedTime = MORNING_START;
     state.morning.lastCheckedEnergy = state.energy;
     state.morning.lastCheckedStress = state.stress;
+    state.lastDayReport = {
+      ...completedDay,
+      sleepEnergy: 0,
+      sleepStress: 0,
+      sleepDebtHours: 8,
+      sleepCopy: "你几乎没睡，今天的日终收获也只能算勉强留下点钱。",
+    };
+    startNewDayState();
     addLog(state, "天亮了，你干脆一夜没睡，带着满身疲惫直接迎接新一天。");
     if (finalizeAfterEndCheck()) {
       return;
@@ -1933,6 +2497,9 @@ function stayUpOneHour() {
   }
 
   render();
+  if (state.lastDayReport) {
+    openDailyReportModal();
+  }
 }
 
 function isMorningAfterOvernight() {
@@ -2156,13 +2723,16 @@ function renderGoodsStoreCards() {
     .filter((bed) => bed.price > 0)
     .map((bed) => {
       const isCurrent = state.bedType === bed.id;
+      const tag = getStoreRecommendation("bed", bed.id);
       return `
         <article class="store-card">
           <header>
             <strong>${bed.name}</strong>
             <span class="store-meta">${bed.price}</span>
           </header>
+          ${tag ? `<span class="store-tag">${tag}</span>` : ""}
           <p>夜间：精力 +${bed.nightEnergyPerHour}/小时，压力 -${bed.nightStressPerHour}/小时。回笼觉：精力 +${bed.morningEnergyPerMinute}/分钟，压力 -${bed.morningStressPerMinute}/分钟。</p>
+          <p>${getBedImmediateImpact(bed)}</p>
           <p>${bed.summary}</p>
           <button class="store-btn" data-action="bed" data-id="${bed.id}" ${state.money < bed.price || isCurrent ? "disabled" : ""}>${isCurrent ? "已装备" : "购买并装备"}</button>
         </article>
@@ -2174,13 +2744,16 @@ function renderGoodsStoreCards() {
     .filter((job) => job.switchCost)
     .map((job) => {
       const isCurrent = state.jobType === job.id;
+      const tag = job.id === "grind" ? "适合冲钱" : "适合保命";
       return `
         <article class="store-card">
           <header>
             <strong>${job.name}</strong>
             <span class="store-meta">${job.switchCost}</span>
           </header>
+          <span class="store-tag">${tag}</span>
           <p>工作结算：精力 ${job.energyDelta}，压力 +${job.stressDelta}，资金 +${job.moneyDelta}。</p>
+          <p>买完后，你每天都会立刻换一种赚钱和掉状态的节奏。</p>
           <p>${job.description}</p>
           <button class="store-btn" data-action="job" data-id="${job.id}" ${state.money < job.switchCost || isCurrent ? "disabled" : ""}>${isCurrent ? "当前路线" : "支付并切换"}</button>
         </article>
@@ -2190,13 +2763,16 @@ function renderGoodsStoreCards() {
 
   const itemCards = Object.values(ITEMS)
     .map((item) => {
+      const tag = getStoreRecommendation("item", item.id);
       return `
         <article class="store-card">
           <header>
             <strong>${item.name}</strong>
             <span class="store-meta">${item.price}</span>
           </header>
+          ${tag ? `<span class="store-tag">${tag}</span>` : ""}
           <p>${item.description}</p>
+          <p>${getItemUseCase(item)}</p>
           <button class="store-btn" data-action="item" data-id="${item.id}" ${state.money < item.price ? "disabled" : ""}>购买</button>
         </article>
       `;
@@ -2213,19 +2789,85 @@ function renderSkillStoreCards() {
       const level = getSkillLevel(skillId);
       const soldOut = level >= skill.maxPurchases;
       const progress = skill.maxPurchases > 1 ? `${level}/${skill.maxPurchases}` : level > 0 ? "已拥有" : "未拥有";
+      const tag = getStoreRecommendation("skill", skill.id);
       return `
         <article class="store-card skill-card">
           <header>
             <strong>${skill.name}</strong>
             <span class="store-meta">${skill.price}</span>
           </header>
+          ${tag ? `<span class="store-tag">${tag}</span>` : ""}
           <p>${skill.effect}</p>
+          <p>${getSkillImpact(skill)}</p>
           <p>${skill.summary}。当前进度：${progress}。</p>
           <button class="store-btn" data-action="skill" data-id="${skill.id}" ${!canPurchaseSkill(skill.id) ? "disabled" : ""}>${soldOut ? "已购满" : `购买 ${skill.price}`}</button>
         </article>
       `;
     })
     .join("");
+}
+
+function openDailyReportModal() {
+  if (!state.lastDayReport) {
+    return;
+  }
+
+  const report = state.lastDayReport;
+  openModal(
+    `
+      <div class="modal-card minigame-card">
+        <p class="eyebrow">Daily Recap</p>
+        <h3>今日收获单</h3>
+        <div class="modal-grid">
+          <div class="modal-section accent-card">
+            <strong>今日净赚</strong>
+            <p>${formatSigned(report.net)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>今日总收入</strong>
+            <p>${formatNumber(report.income)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>今日总消费</strong>
+            <p>${formatNumber(report.spending)}</p>
+          </div>
+          <div class="modal-section">
+            <strong>资产进度</strong>
+            <p>${formatNumber(report.money)} / ${MAX_MONEY}</p>
+          </div>
+          <div class="modal-section">
+            <strong>最佳一手</strong>
+            <p>${report.bestPlayScore > 0 ? `${report.bestPlayLabel} +${formatNumber(report.bestPlayScore)}` : "今天还没打出能挂墙上的一手。"}</p>
+          </div>
+          <div class="modal-section">
+            <strong>关键时刻</strong>
+            <p>${report.keyMoment}</p>
+          </div>
+          <div class="modal-section">
+            <strong>今日成长</strong>
+            <p>${report.growth}</p>
+          </div>
+          <div class="modal-section">
+            <strong>睡眠结算</strong>
+            <p>${report.sleepCopy}${report.sleepEnergy || report.sleepStress ? ` 精力 ${formatSigned(report.sleepEnergy)}，压力 ${formatSigned(report.sleepStress)}。` : ""}</p>
+          </div>
+          <div class="modal-section">
+            <strong>下个节点</strong>
+            <p>${report.goalLabel}。${report.goalCopy}</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="close-day-report" class="modal-btn">带着这些继续活</button>
+        </div>
+      </div>
+    `,
+    () => {
+      document.querySelector("#close-day-report")?.addEventListener("click", () => {
+        state.lastDayReport = null;
+        closeModal();
+      });
+    },
+  );
 }
 
 function bindStoreEvents() {
@@ -2266,7 +2908,9 @@ function buyBed(bedId) {
     return;
   }
   state.money -= bed.price;
+  recordSpending(bed.price, `你把钱砸在了 ${bed.name} 上，接下来每一觉都应该比以前值。`);
   state.bedType = bedId;
+  updateGrowthSummary(`${bed.name} 已就位，从今晚开始，恢复终于更像恢复。`);
   addLog(state, `你把床升级成了${bed.name}，资金 -${bed.price}。`);
   openStoreModal();
 }
@@ -2277,7 +2921,9 @@ function switchJob(jobId) {
     return;
   }
   state.money -= job.switchCost;
+  recordSpending(job.switchCost, `你花 ${job.switchCost} 切换到了 ${job.name}，这是在给未来几天重做风险和收益。`);
   state.jobType = jobId;
+  updateGrowthSummary(`工作路线切到 ${job.name}，每天的班都会换一种疼法，也换一种赚钱法。`);
   addLog(state, `你花 ${job.switchCost} 完成了路线切换，当前工作改为 ${job.name}。`);
   openStoreModal();
 }
@@ -2289,7 +2935,9 @@ function purchaseSkill(skillId) {
   }
 
   state.money -= skill.price;
+  recordSpending(skill.price, `你买下了 ${skill.name}，想让后面的牌局更像在赚钱，而不是在受苦。`);
   state.skillPurchases[skillId] = getSkillLevel(skillId) + 1;
+  updateGrowthSummary(`${skill.name} 已生效，接下来这条 build 会更像样一点。`);
   addLog(state, `你购买了技能【${skill.name}】，资金 -${skill.price}。`);
   activeStoreTab = "skills";
   openStoreModal();
@@ -2315,11 +2963,21 @@ function applyDelta(targetState, delta) {
   targetState.stress = clamp(targetState.stress + (delta.stress ?? 0), 0, 100);
   targetState.money = Math.max(0, targetState.money + (delta.money ?? 0));
 
-  return {
+  const result = {
     energy: round2(targetState.energy - beforeEnergy),
     stress: round2(targetState.stress - beforeStress),
     money: round2(targetState.money - beforeMoney),
   };
+
+  if (targetState === state) {
+    if (result.money > 0) {
+      recordIncome(result.money);
+    } else if (result.money < 0) {
+      recordSpending(Math.abs(result.money));
+    }
+  }
+
+  return result;
 }
 
 function addLog(targetState, text) {
@@ -2328,6 +2986,16 @@ function addLog(targetState, text) {
     text,
   });
   targetState.log = targetState.log.slice(0, 18);
+}
+
+function getLogTone(text) {
+  if (/达标|超额|财富自由|购买了技能|升级成了|终于结算了|睡到了天亮|偷到|里程碑|锁住工资/.test(text)) {
+    return "positive-log";
+  }
+  if (/迟到|绷不住|倒下了|罚|熬了|睡眠债|翻车/.test(text)) {
+    return "negative-log";
+  }
+  return "";
 }
 
 function checkEndConditions() {
